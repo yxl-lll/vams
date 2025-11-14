@@ -1,0 +1,101 @@
+name: Test Build & Deploy
+
+# 这个工作流仅在你手动触发时运行，非常安全
+on:
+  workflow_dispatch:
+
+env:
+  # 可以在这里定义环境变量，方便在步骤中引用
+  DOCKER_IMAGE_NAME: volunteer-management
+  DOCKER_TAG: test-${{ github.sha }} # 使用 commit SHA 作为标签，确保每次构建都是唯一的
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build and Push Docker Image
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🧪 Check if Dockerfile exists
+        run: |
+          if [ ! -f "Dockerfile" ]; then
+            echo "❌ ERROR: Dockerfile not found in the root directory!"
+            echo "Please make sure you have a Dockerfile in your project root."
+            exit 1
+          fi
+          echo "✅ Dockerfile found. Proceeding..."
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 🚀 Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${{ env.DOCKER_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 📝 Image build summary
+        run: |
+          echo "✅ Docker image build and push completed successfully!"
+          echo "Image Name: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}"
+          echo "Image Tag: ${{ env.DOCKER_TAG }}"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Simulate Deployment
+    # 依赖于 build 任务成功完成
+
+    steps:
+      - name: 📋 Deployment Summary
+        run: |
+          echo "=============================================="
+          echo "🚀 Starting SIMULATED Deployment Process"
+          echo "=============================================="
+          echo "This is a TEST deployment. No actual changes are made to your production system."
+          echo ""
+          echo "In a real deployment, this step would typically:"
+          echo "1. SSH into your production server(s)"
+          echo "2. Pull the newly built Docker image"
+          echo "3. Stop and remove the old container"
+          echo "4. Start a new container with the new image"
+          echo "5. Run health checks to ensure everything is working"
+          echo ""
+          echo "Deploying image: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${{ env.DOCKER_TAG }}"
+          echo "=============================================="
+
+      - name: 🧪 Example SSH Deployment Script (Commented Out)
+        run: |
+          # 下面是一个真实部署脚本的示例，目前它只是打印信息，不会执行任何操作。
+          # 当你准备好进行真实测试时，可以取消注释并修改它。
+          
+          echo "🔑 Would use SSH key from secrets: SSH_PRIVATE_KEY"
+          echo "🌐 Would connect to server: ${{ secrets.SSH_HOST }} as user: ${{ secrets.SSH_USERNAME }}"
+          
+          # ssh -i $SSH_PRIVATE_KEY $SSH_USERNAME@$SSH_HOST << 'EOF'
+          #   cd /path/to/your/project
+          #   echo "Pulling latest image..."
+          #   docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${{ env.DOCKER_TAG }}
+          #   echo "Stopping current container..."
+          #   docker-compose down
+          #   echo "Starting new container..."
+          #   docker-compose up -d
+          #   echo "Deployment finished."
+          # EOF
+
+      - name: ✅ TEST Deployment Successful
+        run: |
+          echo "✅ SIMULATED deployment process completed successfully!"
+          echo "No actual changes were made. This was a test."
