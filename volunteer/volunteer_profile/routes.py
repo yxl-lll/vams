@@ -1,10 +1,16 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
-from .service import page_data, add, delete, update, one, list_data, get_by_user_id, update_service_stats, get_volunteer_statistics, get_skills_statistics
-from .model import VolunteerProfileQuery, VolunteerProfileBody, VolunteerProfileUpdateBody
-from utils.result import Result
-from typing import Annotated
+
 from utils.depends import auth, auth_name
+from utils.result import Result
+
+from .model import (VolunteerProfileBody, VolunteerProfileQuery,
+                    VolunteerProfileUpdateBody)
+from .service import (add, delete, get_by_user_id, get_skills_statistics,
+                      get_volunteer_statistics, list_data, one, page_data,
+                      update, update_service_stats)
 
 """ 志愿者档案管理 - 模块路由 """
 
@@ -12,10 +18,22 @@ volunteer_profile_route = APIRouter()
 
 
 @volunteer_profile_route.get("/page")
-async def _page(page: int, limit: int, user_name: str | None = None, volunteer_level: str | None = None, skills: str | None = None):
+async def _page(
+    page: int,
+    limit: int,
+    user_name: str | None = None,
+    volunteer_level: str | None = None,
+    skills: str | None = None,
+):
     if user_name != None:
         user_name = user_name + "#like"
-    total, list = await page_data(page, limit, VolunteerProfileQuery(user_name=user_name, volunteer_level=volunteer_level, skills=skills))
+    total, list = await page_data(
+        page,
+        limit,
+        VolunteerProfileQuery(
+            user_name=user_name, volunteer_level=volunteer_level, skills=skills
+        ),
+    )
     return Result.success(total=total, data=list)
 
 
@@ -23,7 +41,9 @@ async def _page(page: int, limit: int, user_name: str | None = None, volunteer_l
 async def _list(user_name: str | None = None, volunteer_level: str | None = None):
     if user_name != None:
         user_name = user_name + "#like"
-    data = await list_data(VolunteerProfileQuery(user_name=user_name, volunteer_level=volunteer_level))
+    data = await list_data(
+        VolunteerProfileQuery(user_name=user_name, volunteer_level=volunteer_level)
+    )
     # 修复：传递正确的total参数，确保前端能正确显示数据
     return Result.success(data=data, total=len(data))
 

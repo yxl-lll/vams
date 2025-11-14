@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends
-from .service import page_data, add, delete, update, one, list_data
-from .model import ActivityTypeQuery, ActivityTypeBody, ActivityTypeUpdateBody
-from utils.result import Result
 from typing import Annotated
+
+from fastapi import APIRouter, Depends
+
 from utils.depends import auth, auth_name
+from utils.result import Result
+
+from .model import ActivityTypeBody, ActivityTypeQuery, ActivityTypeUpdateBody
+from .service import add, delete, list_data, one, page_data, update
 
 """ 活动类型管理 - 模块路由 """
 
@@ -11,10 +14,19 @@ activity_type_route = APIRouter()
 
 
 @activity_type_route.get("/page")
-async def _page(page: int, limit: int, type_name: str | None = None, difficulty_level: str | None = None):
+async def _page(
+    page: int,
+    limit: int,
+    type_name: str | None = None,
+    difficulty_level: str | None = None,
+):
     if type_name != None:
         type_name = type_name + "#like"
-    total, list = await page_data(page, limit, ActivityTypeQuery(type_name=type_name, difficulty_level=difficulty_level))
+    total, list = await page_data(
+        page,
+        limit,
+        ActivityTypeQuery(type_name=type_name, difficulty_level=difficulty_level),
+    )
     return Result.success(total=total, data=list)
 
 
@@ -22,7 +34,9 @@ async def _page(page: int, limit: int, type_name: str | None = None, difficulty_
 async def _list(type_name: str | None = None, difficulty_level: str | None = None):
     if type_name != None:
         type_name = type_name + "#like"
-    data = await list_data(ActivityTypeQuery(type_name=type_name, difficulty_level=difficulty_level))
+    data = await list_data(
+        ActivityTypeQuery(type_name=type_name, difficulty_level=difficulty_level)
+    )
     # 修复：传递正确的total参数，确保前端能正确显示数据
     return Result.success(data=data, total=len(data))
 

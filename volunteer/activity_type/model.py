@@ -1,6 +1,7 @@
 from datetime import datetime
-from pydantic import BaseModel
 from typing import Optional
+
+from pydantic import BaseModel
 
 """ 活动类型管理 - 模块模型定义 """
 
@@ -13,7 +14,7 @@ class ActivityTypeQuery(BaseModel):
 class ActivityTypeBody(BaseModel):
     type_name: str
     description: Optional[str] = None
-    difficulty_level: str = 'normal'
+    difficulty_level: str = "normal"
     required_skills: Optional[str] = None
     remark: Optional[str] = None
 

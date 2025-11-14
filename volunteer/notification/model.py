@@ -1,6 +1,7 @@
 from datetime import datetime
-from pydantic import BaseModel
 from typing import Optional
+
+from pydantic import BaseModel
 
 """ 通知消息管理 - 模块模型定义 """
 
@@ -17,9 +18,9 @@ class NotificationQuery(BaseModel):
 class NotificationBody(BaseModel):
     title: str
     content: str
-    type: str = 'system'
+    type: str = "system"
     target_user_id: Optional[str] = None
-    priority: str = 'normal'
+    priority: str = "normal"
     expire_time: Optional[datetime] = None
 
 

@@ -1,9 +1,11 @@
-
-from datetime import datetime, date
-from pydantic import BaseModel
+from datetime import date, datetime
 from decimal import Decimal
 
+from pydantic import BaseModel
+
 """ 菜单表 - 模块模型定义 """
+
+
 class Menu(BaseModel):
     id: str
     menu_name: str
@@ -18,6 +20,7 @@ class Menu(BaseModel):
     url: str | None = None
     hurl: str | None = None
 
+
 class MenuQuery(BaseModel):
     menu_name: str | None = None
     menu_status: int | None = None
@@ -29,6 +32,7 @@ class MenuQuery(BaseModel):
     url: str | None = None
     hurl: str | None = None
 
+
 class MenuBody(BaseModel):
     menu_name: str
     menu_status: int
@@ -39,4 +43,3 @@ class MenuBody(BaseModel):
     type: int | None = None
     url: str | None = None
     hurl: str | None = None
-    

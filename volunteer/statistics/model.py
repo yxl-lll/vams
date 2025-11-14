@@ -1,6 +1,7 @@
-from datetime import datetime, date
-from pydantic import BaseModel
+from datetime import date, datetime
 from typing import Optional
+
+from pydantic import BaseModel
 
 """ 统计报表 - 模块模型定义 """
 

@@ -1,2 +1,2 @@
-from .config import global_config, templates, database, metadata
+from .config import database, global_config, metadata, templates
 from .h5_config import h5config

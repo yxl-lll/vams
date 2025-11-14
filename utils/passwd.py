@@ -1,8 +1,10 @@
 import base64
 import hashlib
 from binascii import Error
-from config import global_config
+
 import rsa
+
+from config import global_config
 
 public_pem = b"""
 -----BEGIN RSA PUBLIC KEY-----
@@ -30,46 +32,55 @@ SLWgfuipX8atSuKsitaxikgWZRa4lQprdx0Y3GPRJul+6XCAlw==
 -----END RSA PRIVATE KEY-----
 """  # 私钥
 
+
 def get_password_hash(password: str) -> str:
-    """ 加密明文密码 """
+    """加密明文密码"""
     md5_dict = hashlib.md5()
-    md5_dict.update((password + global_config['md5-salt']).encode("utf-8"))
+    md5_dict.update((password + global_config["md5-salt"]).encode("utf-8"))
     return md5_dict.hexdigest()
 
 
 def verify_password(password: str, hashed_password: str) -> bool:
-    """ 验证明文密码 与 加密后的密码 是否一致 """
+    """验证明文密码 与 加密后的密码 是否一致"""
     ciphertext = get_password_hash(password)
     print(ciphertext, hashed_password, password)
     return bool(ciphertext == hashed_password)
 
 
 def generate_rsa_key():
-    """ 生成公钥、私钥  - https://www.cnblogs.com/wangyingblock/p/15908056.html """
+    """生成公钥、私钥  - https://www.cnblogs.com/wangyingblock/p/15908056.html"""
     public_key, private_key = rsa.newkeys(1024)  # 生成公钥和私钥
 
     public = public_key.save_pkcs1()  # 转换格式
     private = private_key.save_pkcs1()  # 转换格式
 
-    with open('../public.pem', mode='wb') as f:  # 存储
+    with open("../public.pem", mode="wb") as f:  # 存储
         f.write(public)
-    with open('../private.pem', mode='wb') as f:  # 存储
+    with open("../private.pem", mode="wb") as f:  # 存储
         f.write(private)
 
 
 def rsa_encrypt_password(plaintext):
-    """ rsa加密(base64转码) - https://www.cnblogs.com/wangyingblock/p/15908056.html """
-    return base64.b64encode(rsa.encrypt(plaintext.encode('utf-8'), rsa.PublicKey.load_pkcs1(public_pem)))
+    """rsa加密(base64转码) - https://www.cnblogs.com/wangyingblock/p/15908056.html"""
+    return base64.b64encode(
+        rsa.encrypt(plaintext.encode("utf-8"), rsa.PublicKey.load_pkcs1(public_pem))
+    )
+
 
 def rsa_decrypt_password(ciphertext):
-    """ rsa加密(base64解码) - https://www.cnblogs.com/wangyingblock/p/15908056.html """
-    return rsa.decrypt(base64.b64decode(ciphertext), rsa.PrivateKey.load_pkcs1(private_pem)).decode('utf-8')
+    """rsa加密(base64解码) - https://www.cnblogs.com/wangyingblock/p/15908056.html"""
+    return rsa.decrypt(
+        base64.b64decode(ciphertext), rsa.PrivateKey.load_pkcs1(private_pem)
+    ).decode("utf-8")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # print(get_password_hash("123456"))
 
     generate_rsa_key()
     # encrypt = rsa_encrypt_password('123456')
     # print(encrypt)
-    decrypt = rsa_decrypt_password("PJtMtzjGp26JR9raXzGwLkgRRtCWg5zVQjOQQ10j70J/PuMXMriDLcbIAsIsx1thEMVsAA/GP3GOTGGEFOVMZzV8mlW5bXJw9kyWSuhNlCHax/1LEa+sggiOEoF5vZ+TQuiKqtaTqGm7G7Mj1lY4v859KpBKW1Utb9J7fOY7qUE=")
+    decrypt = rsa_decrypt_password(
+        "PJtMtzjGp26JR9raXzGwLkgRRtCWg5zVQjOQQ10j70J/PuMXMriDLcbIAsIsx1thEMVsAA/GP3GOTGGEFOVMZzV8mlW5bXJw9kyWSuhNlCHax/1LEa+sggiOEoF5vZ+TQuiKqtaTqGm7G7Mj1lY4v859KpBKW1Utb9J7fOY7qUE="
+    )
     print(decrypt)  # 使用之前必须先解码

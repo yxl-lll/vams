@@ -2,4 +2,4 @@
 
 from .register_router import register_volunteer_router
 
-__all__ = ['register_volunteer_router']
+__all__ = ["register_volunteer_router"]

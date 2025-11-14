@@ -1,7 +1,8 @@
-from datetime import datetime, date
-from pydantic import BaseModel
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
+
+from pydantic import BaseModel
 
 """ 志愿者档案管理 - 模块模型定义 """
 
@@ -18,11 +19,11 @@ class VolunteerProfileBody(BaseModel):
     real_name: Optional[str] = None
     phone: Optional[str] = None
     id_card: Optional[str] = None
-    gender: Optional[str] = '男'
+    gender: Optional[str] = "男"
     birth_date: Optional[date] = None
     skills: Optional[str] = None
     interests: Optional[str] = None
-    volunteer_level: str = 'bronze'
+    volunteer_level: str = "bronze"
     join_date: Optional[date] = None
     status: Optional[int] = 1
     remarks: Optional[str] = None

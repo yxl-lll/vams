@@ -1,9 +1,11 @@
-
-from datetime import datetime, date
-from pydantic import BaseModel
+from datetime import date, datetime
 from decimal import Decimal
 
+from pydantic import BaseModel
+
 """ 人员表 - 模块模型定义 """
+
+
 class User(BaseModel):
     username: str
     id: str
@@ -19,6 +21,7 @@ class User(BaseModel):
     phone: str | None = None
     updated_at: datetime | None = None
 
+
 class UserQuery(BaseModel):
     username: str | None = None
     gender: int | None = None
@@ -30,6 +33,7 @@ class UserQuery(BaseModel):
     email: str | None = None
     nick_name: str | None = None
     phone: str | None = None
+
 
 class UserBody(BaseModel):
     username: str
@@ -44,8 +48,8 @@ class UserBody(BaseModel):
     phone: str | None = None
     role_ids: str | None = None
 
+
 class UpPwdBody(BaseModel):
     password: str | None = None
     repassword: str | None = None
     old_password: str | None = None
-    

@@ -1,9 +1,11 @@
-from datetime import datetime, date
-from pydantic import BaseModel
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
+from pydantic import BaseModel
+
 """ 活动计划管理 - 模块模型定义 """
+
 
 class VolunteerPlansQuery(BaseModel):
     activity_type: Optional[str] = None
@@ -11,6 +13,7 @@ class VolunteerPlansQuery(BaseModel):
     user_id: Optional[str] = None
     status: Optional[str] = None
     creator_role: Optional[str] = None  # <--- 新增：用于查询过滤
+
 
 class VolunteerPlansBody(BaseModel):
     activity_name: str
@@ -24,6 +27,7 @@ class VolunteerPlansBody(BaseModel):
     contact_person: Optional[str] = None
     contact_phone: Optional[str] = None
     remark: Optional[str] = None
+
 
 class VolunteerPlansUpdateBody(BaseModel):
     activity_name: Optional[str] = None
@@ -39,6 +43,7 @@ class VolunteerPlansUpdateBody(BaseModel):
     remark: Optional[str] = None
     status: Optional[str] = None
     creator_role: Optional[str] = None  # <--- 新增：虽然创建时设置，但更新模型也带上
+
 
 class VolunteerPlansStatusUpdate(BaseModel):
     status: str  # <--- 补充完整，原文件可能遗漏

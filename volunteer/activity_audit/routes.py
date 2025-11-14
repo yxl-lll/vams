@@ -1,9 +1,14 @@
-from fastapi import APIRouter, Depends
-from .service import page_data, add, delete, update, one, list_data, update_audit_status, get_pending_audits, get_audit_statistics
-from .model import ActivityAuditQuery, ActivityAuditBody, ActivityAuditUpdateBody, ActivityAuditStatusUpdate
-from utils.result import Result
 from typing import Annotated
+
+from fastapi import APIRouter, Depends
+
 from utils.depends import auth, auth_name
+from utils.result import Result
+
+from .model import (ActivityAuditBody, ActivityAuditQuery,
+                    ActivityAuditStatusUpdate, ActivityAuditUpdateBody)
+from .service import (add, delete, get_audit_statistics, get_pending_audits,
+                      list_data, one, page_data, update, update_audit_status)
 
 """ 活动审核管理 - 模块路由 """
 
@@ -11,10 +16,24 @@ activity_audit_route = APIRouter()
 
 
 @activity_audit_route.get("/page")
-async def _page(page: int, limit: int, activity_name: str | None = None, audit_status: str | None = None, auditor_id: str | None = None):
+async def _page(
+    page: int,
+    limit: int,
+    activity_name: str | None = None,
+    audit_status: str | None = None,
+    auditor_id: str | None = None,
+):
     if activity_name != None:
         activity_name = activity_name + "#like"
-    total, list = await page_data(page, limit, ActivityAuditQuery(activity_name=activity_name, audit_status=audit_status, auditor_id=auditor_id))
+    total, list = await page_data(
+        page,
+        limit,
+        ActivityAuditQuery(
+            activity_name=activity_name,
+            audit_status=audit_status,
+            auditor_id=auditor_id,
+        ),
+    )
     return Result.success(total=total, data=list)
 
 
@@ -22,7 +41,9 @@ async def _page(page: int, limit: int, activity_name: str | None = None, audit_s
 async def _list(activity_name: str | None = None, audit_status: str | None = None):
     if activity_name != None:
         activity_name = activity_name + "#like"
-    data = await list_data(ActivityAuditQuery(activity_name=activity_name, audit_status=audit_status))
+    data = await list_data(
+        ActivityAuditQuery(activity_name=activity_name, audit_status=audit_status)
+    )
     # 修复：传递正确的total参数，确保前端能正确显示数据
     return Result.success(data=data, total=len(data))
 
@@ -33,7 +54,9 @@ async def _one(id: str):
 
 
 @activity_audit_route.post("/add")
-async def _add(_activityAudit: ActivityAuditBody, auditor_info: Annotated[any, Depends(auth_name)]):
+async def _add(
+    _activityAudit: ActivityAuditBody, auditor_info: Annotated[any, Depends(auth_name)]
+):
     result = await add(_activityAudit, auditor_info)
     if result == True:
         return Result.success(data=result)

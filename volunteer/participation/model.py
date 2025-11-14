@@ -1,12 +1,15 @@
 from datetime import datetime
-from pydantic import BaseModel
 from typing import Optional
 
+from pydantic import BaseModel
+
 """ 活动参与记录 - 模块模型定义 """
+
 
 class ParticipationQuery(BaseModel):
     activity_name: Optional[str] = None
     status: Optional[str] = None
+
 
 class ParticipationBody(BaseModel):
     activity_id: str
@@ -18,12 +21,15 @@ class ParticipationBody(BaseModel):
     participant_count: int
     remark: Optional[str] = None
 
+
 class ParticipationUpdateBody(BaseModel):
     participant_count: Optional[int] = None
     remark: Optional[str] = None
 
+
 class CheckInBody(BaseModel):
     check_in_time: str
+
 
 class CheckOutBody(BaseModel):
     check_out_time: str

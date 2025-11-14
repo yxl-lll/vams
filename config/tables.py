@@ -1,4 +1,5 @@
-from sqlalchemy import Table, Column, Integer, String, DATETIME, Text, DECIMAL
+from sqlalchemy import DATETIME, DECIMAL, Column, Integer, String, Table, Text
+
 from config import metadata
 
 """
