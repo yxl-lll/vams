@@ -2,14 +2,12 @@ import logging
 import uuid
 from datetime import datetime
 
-from sqlalchemy import (DATETIME, Column, Integer, String, Table, Text, func,
-                        select)
+from sqlalchemy import DATETIME, Column, Integer, String, Table, Text, func, select
 
 from config import database, metadata
 from utils.fix_query import FixQuery
 
-from .model import (ActivityAuditBody, ActivityAuditQuery,
-                    ActivityAuditUpdateBody)
+from .model import ActivityAuditBody, ActivityAuditQuery, ActivityAuditUpdateBody
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)

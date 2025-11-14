@@ -5,10 +5,23 @@ from fastapi import APIRouter, Depends
 from utils.depends import auth, auth_name
 from utils.result import Result
 
-from .model import (ActivityAuditBody, ActivityAuditQuery,
-                    ActivityAuditStatusUpdate, ActivityAuditUpdateBody)
-from .service import (add, delete, get_audit_statistics, get_pending_audits,
-                      list_data, one, page_data, update, update_audit_status)
+from .model import (
+    ActivityAuditBody,
+    ActivityAuditQuery,
+    ActivityAuditStatusUpdate,
+    ActivityAuditUpdateBody,
+)
+from .service import (
+    add,
+    delete,
+    get_audit_statistics,
+    get_pending_audits,
+    list_data,
+    one,
+    page_data,
+    update,
+    update_audit_status,
+)
 
 """ 活动审核管理 - 模块路由 """
 

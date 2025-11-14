@@ -5,10 +5,13 @@ from fastapi import APIRouter, Depends
 from utils.depends import auth, auth_name  # <--- 确保导入了 auth
 from utils.result import Result
 
-from .model import (VolunteerPlansBody, VolunteerPlansQuery,
-                    VolunteerPlansStatusUpdate, VolunteerPlansUpdateBody)
-from .service import (add, delete, list_data, one, page_data, update,
-                      update_status)
+from .model import (
+    VolunteerPlansBody,
+    VolunteerPlansQuery,
+    VolunteerPlansStatusUpdate,
+    VolunteerPlansUpdateBody,
+)
+from .service import add, delete, list_data, one, page_data, update, update_status
 
 """ 活动计划管理 - 模块路由 """
 

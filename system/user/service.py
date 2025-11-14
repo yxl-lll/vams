@@ -1,16 +1,14 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import (DATE, DATETIME, Column, Integer, String, Table, func,
-                        select)
+from sqlalchemy import DATE, DATETIME, Column, Integer, String, Table, func, select
 
 from config import database, metadata
 from system.user_role.model import UserRoleBody
 from system.user_role.service import add as add_mr
 from system.user_role.service import delete as del_by_user_id
 from utils.fix_query import FixQuery
-from utils.passwd import (get_password_hash, rsa_decrypt_password,
-                          verify_password)
+from utils.passwd import get_password_hash, rsa_decrypt_password, verify_password
 
 from .model import UpPwdBody, UserBody, UserQuery
 

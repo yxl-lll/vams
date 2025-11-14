@@ -6,6 +6,7 @@ from starlette.responses import RedirectResponse
 from config import database, global_config, h5config
 from system import register_sys_router
 from volunteer import register_volunteer_router
+
 # 导入通知路由（仅用于重定向，挂载由 register_volunteer_router 统一处理）
 from volunteer.notification.routes import notification_route
 

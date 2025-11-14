@@ -18,11 +18,20 @@ from .model import NotificationBody, NotificationQuery, NotificationUpdateBody
 from .service import add
 from .service import batch_delete as service_batch_delete
 from .service import batch_send as service_batch_send
-from .service import (delete, get_by_user_id, get_notification_statistics,
-                      get_unread_count, list_data, mark_as_read,
-                      mark_multiple_as_read, one, page_data,
-                      send_activity_notification, send_system_notification,
-                      update)
+from .service import (
+    delete,
+    get_by_user_id,
+    get_notification_statistics,
+    get_unread_count,
+    list_data,
+    mark_as_read,
+    mark_multiple_as_read,
+    one,
+    page_data,
+    send_activity_notification,
+    send_system_notification,
+    update,
+)
 
 """ 通知消息管理 - 模块路由 """
 notification_route = APIRouter(tags=["Notification"])

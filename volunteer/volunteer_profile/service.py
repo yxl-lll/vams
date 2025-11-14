@@ -2,14 +2,27 @@ import logging
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import (DATE, DATETIME, DECIMAL, Column, Integer, String,
-                        Table, Text, func, select)
+from sqlalchemy import (
+    DATE,
+    DATETIME,
+    DECIMAL,
+    Column,
+    Integer,
+    String,
+    Table,
+    Text,
+    func,
+    select,
+)
 
 from config import database, metadata
 from utils.fix_query import FixQuery
 
-from .model import (VolunteerProfileBody, VolunteerProfileQuery,
-                    VolunteerProfileUpdateBody)
+from .model import (
+    VolunteerProfileBody,
+    VolunteerProfileQuery,
+    VolunteerProfileUpdateBody,
+)
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)

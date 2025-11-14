@@ -2,8 +2,7 @@ import logging
 import uuid
 from datetime import datetime
 
-from sqlalchemy import (DATETIME, Column, Integer, String, Table, Text, func,
-                        select)
+from sqlalchemy import DATETIME, Column, Integer, String, Table, Text, func, select
 
 from config import database, metadata
 from utils.fix_query import FixQuery

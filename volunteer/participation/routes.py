@@ -4,10 +4,25 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from utils.depends import auth_name
 
-from .model import (CheckInBody, CheckOutBody, ParticipationBody,
-                    ParticipationQuery, ParticipationUpdateBody)
-from .service import (add, cancel_participation, check_in, check_out, delete,
-                      get_user_statistics, list_data, one, page_data, update)
+from .model import (
+    CheckInBody,
+    CheckOutBody,
+    ParticipationBody,
+    ParticipationQuery,
+    ParticipationUpdateBody,
+)
+from .service import (
+    add,
+    cancel_participation,
+    check_in,
+    check_out,
+    delete,
+    get_user_statistics,
+    list_data,
+    one,
+    page_data,
+    update,
+)
 
 """ 活动参与记录 - 模块路由 """
 

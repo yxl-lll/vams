@@ -4,8 +4,19 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
-from sqlalchemy import (Boolean, Column, DateTime, MetaData, String, Table,
-                        Text, delete, func, select, update)
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    MetaData,
+    String,
+    Table,
+    Text,
+    delete,
+    func,
+    select,
+    update,
+)
 from sqlalchemy.dialects.mysql import INTEGER
 
 logger = logging.getLogger(__name__)

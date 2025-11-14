@@ -1,8 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import (DATE, DATETIME, Column, Integer, String, Table, func,
-                        select)
+from sqlalchemy import DATE, DATETIME, Column, Integer, String, Table, func, select
 
 from config import database, metadata
 from system.menu_role.service import menuRole

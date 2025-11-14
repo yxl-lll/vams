@@ -6,8 +6,12 @@ from utils.depends import auth
 from utils.result import Result
 
 from .model import StatisticsQuery
-from .service import (get_activity_type_statistics, get_monthly_statistics,
-                      get_user_statistics, get_volunteer_statistics)
+from .service import (
+    get_activity_type_statistics,
+    get_monthly_statistics,
+    get_user_statistics,
+    get_volunteer_statistics,
+)
 
 """ 统计报表 - 模块路由 """
 

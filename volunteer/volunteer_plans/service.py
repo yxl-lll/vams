@@ -5,12 +5,12 @@ from datetime import datetime
 from sqlalchemy import func, select
 
 from config import database, metadata
+
 # 从共享表定义中导入
 from config.tables import volunteer_plans
 from utils.fix_query import FixQuery
 
-from .model import (VolunteerPlansBody, VolunteerPlansQuery,
-                    VolunteerPlansUpdateBody)
+from .model import VolunteerPlansBody, VolunteerPlansQuery, VolunteerPlansUpdateBody
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)

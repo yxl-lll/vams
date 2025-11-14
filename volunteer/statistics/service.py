@@ -9,8 +9,12 @@ from volunteer.participation.service import participation
 from volunteer.volunteer_plans.service import volunteer_plans
 from volunteer.volunteer_profile.service import volunteer_profile
 
-from .model import (ActivityStatistics, StatisticsQuery, UserStatistics,
-                    VolunteerStatistics)
+from .model import (
+    ActivityStatistics,
+    StatisticsQuery,
+    UserStatistics,
+    VolunteerStatistics,
+)
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)

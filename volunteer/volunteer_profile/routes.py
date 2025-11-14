@@ -6,11 +6,23 @@ from fastapi.responses import JSONResponse
 from utils.depends import auth, auth_name
 from utils.result import Result
 
-from .model import (VolunteerProfileBody, VolunteerProfileQuery,
-                    VolunteerProfileUpdateBody)
-from .service import (add, delete, get_by_user_id, get_skills_statistics,
-                      get_volunteer_statistics, list_data, one, page_data,
-                      update, update_service_stats)
+from .model import (
+    VolunteerProfileBody,
+    VolunteerProfileQuery,
+    VolunteerProfileUpdateBody,
+)
+from .service import (
+    add,
+    delete,
+    get_by_user_id,
+    get_skills_statistics,
+    get_volunteer_statistics,
+    list_data,
+    one,
+    page_data,
+    update,
+    update_service_stats,
+)
 
 """ 志愿者档案管理 - 模块路由 """
 

@@ -3,8 +3,7 @@ from system.user.model import UserBody
 from system.user.service import add, one, username
 from system.user_role.service import lists as lists_role
 from utils.depends import generate_jwt_token
-from utils.passwd import (get_password_hash, rsa_decrypt_password,
-                          verify_password)
+from utils.passwd import get_password_hash, rsa_decrypt_password, verify_password
 from utils.result import Result
 
 from .model import LoginBody, RegisterBody

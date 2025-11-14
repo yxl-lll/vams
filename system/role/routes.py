@@ -6,8 +6,17 @@ from utils.depends import auth
 from utils.result import Result
 
 from .model import Role, RoleBody, RoleQuery
-from .service import (add, authorize, delete, get_auth_menu, get_auth_role,
-                      lists, one, pages, update)
+from .service import (
+    add,
+    authorize,
+    delete,
+    get_auth_menu,
+    get_auth_role,
+    lists,
+    one,
+    pages,
+    update,
+)
 
 """ 角色表 - 模块路由 """
 
