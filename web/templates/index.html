@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{sysname}}</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <link rel="stylesheet" href="/static/layui/css/layui.css" media="all">
+  <style>
+    .layui-layout-admin .layui-header {
+      background-color: #393D49;
+    }
+    .layui-layout-admin .layui-side {
+      background-color: #23262E;
+    }
+    .layui-nav-tree .layui-nav-item a {
+      color: #fff;
+    }
+    .layui-nav-tree .layui-nav-item a:hover {
+      background-color: #009688;
+    }
+    .layui-nav-tree .layui-nav-item.layui-this > a {
+      background-color: #009688;
+    }
+    .layui-card {
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .layui-card-header {
+      background-color: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
+      font-weight: bold;
+    }
+    .layui-card-header i {
+      margin-right: 8px;
+      color: #009688;
+    }
+    .layui-btn {
+      border-radius: 4px;
+    }
+    .layui-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transition: all 0.3s ease;
+    }
+    .welcome-header {
+      text-align: center;
+      padding: 20px 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .welcome-header h3 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 300;
+    }
+    .dashboard-card {
+      text-align: center;
+      padding: 20px;
+      height: 200px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .dashboard-card .layui-card-body p {
+      color: #666;
+      margin: 15px 0;
+      flex-grow: 1;
+    }
+    
+    /* 侧边栏收缩样式 */
+    .layui-side-shrink {
+      width: 60px !important;
+    }
+    
+    .layui-side-shrink .layui-nav-item cite,
+    .layui-side-shrink .layui-nav-child {
+      display: none;
+    }
+    
+    .layui-side-shrink .layui-nav-item {
+      text-align: center;
+    }
+    
+    .layui-side-shrink .layui-nav-item a {
+      padding: 0;
+      text-align: center;
+    }
+    
+    .layui-side-shrink .layui-nav-item i {
+      margin: 0;
+      font-size: 18px;
+    }
+    
+    /* 主体内容区域响应式调整 */
+    .layui-body {
+      transition: left 0.3s ease;
+    }
+  </style>
+</head>
+
+<body>
+    <div class="layui-layout layui-layout-admin">
+    <!-- 头部 -->
+      <div class="layui-header">
+      <div class="layui-logo layui-hide-xs layui-bg-black">{{sysname}}</div>
+        <ul class="layui-nav layui-layout-left">
+        <li class="layui-nav-item layui-hide-xs">
+          <a href="javascript:;" lay-event="flexible" title="侧边伸缩">
+            <i class="layui-icon layui-icon-shrink-right"></i>
+            </a>
+          </li>
+        <li class="layui-nav-item layui-hide-xs">
+          <a href="javascript:;" lay-event="refresh" title="刷新">
+              <i class="layui-icon layui-icon-refresh-3"></i>
+            </a>
+          </li>
+        <li class="layui-nav-item layui-hide-xs">
+          <a href="javascript:;" lay-event="fullscreen" title="全屏">
+              <i class="layui-icon layui-icon-screen-full"></i>
+            </a>
+          </li>
+      </ul>
+      <ul class="layui-nav layui-layout-right">
+        <li class="layui-nav-item layui-hide layui-show-md-inline-block">
+            <a href="javascript:;">
+            <i class="layui-icon layui-icon-user"></i>
+            {{nick_name}}
+            </a>
+            <dl class="layui-nav-child">
+            <dd><a href="javascript:;" onclick="logout()">退出登录</a></dd>
+            </dl>
+          </li>
+        </ul>
+      </div>
+
+    <!-- 侧边栏 -->
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+        <ul class="layui-nav layui-nav-tree" lay-filter="test">
+          <li data-name="home" class="layui-nav-item layui-this">
+            <a href="javascript:;" lay-tips="首页" lay-direction="2" onclick="loadPage('首页', '/')">
+              <i class="layui-icon layui-icon-home"></i>
+              <cite>首页</cite>
+            </a>
+          </li>
+            {% for item in menus %}
+            {% if item.menu_name != '首页' %}
+          <li data-name="{{item.menu_name}}" class="layui-nav-item">
+            <a href="javascript:;" lay-tips="{{item.menu_name}}" lay-direction="2" onclick="loadPage('{{item.menu_name}}', '{{item.hurl}}')">
+              <i class="layui-icon layui-icon-{{item.icon or 'layui-icon-circle'}}"></i>
+              <cite>{{item.menu_name}}</cite>
+            </a>
+            {% if item.children %}
+              <dl class="layui-nav-child">
+                {% for sub_item in item.children %}
+              <dd><a href="javascript:;" onclick="loadPage('{{sub_item.menu_name}}', '{{sub_item.hurl}}')">{{sub_item.menu_name}}</a></dd>
+                {% endfor %}
+              </dl>
+              {% endif %}
+            </li>
+            {% endif %}
+            {% endfor %}
+            <li data-name="set" class="layui-nav-item">
+            <a href="javascript:;" lay-tips="设置" lay-direction="2" onclick="loadPage('设置', '/static/views/set/info.html')">
+                <i class="layui-icon layui-icon-set"></i>
+                <cite>设置</cite>
+              </a>
+              <dl class="layui-nav-child">
+              <dd><a href="javascript:;" onclick="loadPage('基本资料', '/static/views/set/info.html')">基本资料</a></dd>
+              <dd><a href="javascript:;" onclick="loadPage('修改密码', '/static/views/set/password.html')">修改密码</a></dd>
+              </dl>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+    <!-- 主体内容 -->
+    <div class="layui-body">
+      <!-- Tab标签页 -->
+      <div class="layui-tab layui-tab-brief" lay-filter="mainTab" lay-allowClose="true">
+        <ul class="layui-tab-title">
+          <li class="layui-this" lay-id="home">首页</li>
+          </ul>
+        <div class="layui-tab-content">
+          <div class="layui-tab-item layui-show">
+            <div class="layui-card">
+              <div class="welcome-header">
+                <h3>欢迎使用{{sysname}}</h3>
+              </div>
+              <div class="layui-card-body">
+                <div class="layui-row layui-col-space15">
+                  <div class="layui-col-md3">
+                    <div class="layui-card dashboard-card">
+                      <div class="layui-card-header">
+                        <i class="layui-icon layui-icon-trademark"></i>
+                        活动计划管理
+                      </div>
+                      <div class="layui-card-body">
+                        <p>创建和管理志愿者活动计划</p>
+                        <a href="javascript:;" onclick="loadPage('活动计划管理', '/static/views/volunteer-plans/list.html')" class="layui-btn layui-btn-sm layui-btn-normal">进入管理</a>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="layui-col-md3">
+                    <div class="layui-card dashboard-card">
+                      <div class="layui-card-header">
+                        <i class="layui-icon layui-icon-copyright"></i>
+                        活动参与记录
+                      </div>
+                      <div class="layui-card-body">
+                        <p>记录志愿者活动参与情况</p>
+                        <a href="javascript:;" onclick="loadPage('活动参与记录', '/static/views/participation/list.html')" class="layui-btn layui-btn-sm layui-btn-normal">查看记录</a>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="layui-col-md3">
+                    <div class="layui-card dashboard-card">
+                      <div class="layui-card-header">
+                        <i class="layui-icon layui-icon-CI"></i>
+                        活动类型管理
+                      </div>
+                      <div class="layui-card-body">
+                        <p>管理不同类型的志愿者活动</p>
+                        <a href="javascript:;" onclick="loadPage('活动类型管理', '/static/views/activity-type/list.html')" class="layui-btn layui-btn-sm layui-btn-normal">类型管理</a>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="layui-col-md3">
+                    <div class="layui-card dashboard-card">
+                      <div class="layui-card-header">
+                        <i class="layui-icon layui-icon-user"></i>
+                        志愿者档案
+                      </div>
+                      <div class="layui-card-body">
+                        <p>管理和查看志愿者档案信息</p>
+                        <a href="javascript:;" onclick="loadPage('志愿者档案', '/static/views/volunteer-profile/list.html')" class="layui-btn layui-btn-sm layui-btn-normal">档案管理</a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+        </div>
+        </div>
+      </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/layui/layui.js"></script>
+  <script>
+    layui.use(['element', 'layer'], function () {
+      var element = layui.element;
+      var layer = layui.layer;
+      
+      console.log('LayUI组件初始化完成');
+      
+      // 全局错误处理
+      window.addEventListener('error', function(e) {
+        console.error('全局错误:', e.error);
+      });
+      
+      // 未处理的Promise拒绝
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('未处理的Promise拒绝:', e.reason);
+      });
+      
+      // 调试菜单点击事件
+      console.log('正在初始化菜单事件...');
+      
+      // 为所有菜单项添加点击事件监听
+      document.addEventListener('DOMContentLoaded', function() {
+        var menuItems = document.querySelectorAll('.layui-nav-item a[onclick]');
+        console.log('找到菜单项数量:', menuItems.length);
+        menuItems.forEach(function(item, index) {
+          console.log('菜单项', index + 1, ':', item.textContent.trim(), 'onclick:', item.getAttribute('onclick'));
+        });
+      });
+
+      // 页面加载函数
+      window.loadPage = function(title, url) {
+        if (!url) {
+          layer.msg('页面地址无效', {icon: 2});
+          return;
+        }
+        
+        // 处理首页特殊情况
+        if (url === '/' || url === '') {
+          console.log('切换到首页');
+          element.tabChange('mainTab', 'home');
+          return;
+        }
+        
+        try {
+          // 检查是否已经存在该URL的Tab
+          var existingTab = document.querySelector('li[data-url="' + url + '"]');
+          if (existingTab) {
+            // 如果Tab已存在，切换到该Tab
+            var tabId = existingTab.getAttribute('lay-id');
+            console.log('Tab已存在，切换到:', tabId);
+            element.tabChange('mainTab', tabId);
+            return;
+          }
+          
+          // 显示加载提示
+          var loadingIndex = layer.load(2, {shade: [0.3, '#000']});
+          
+          // 检查页面是否存在
+          fetch(url)
+            .then(response => {
+              layer.close(loadingIndex);
+              if (response.ok) {
+                // 页面存在，创建新Tab
+                createNewTab(title, url);
+              } else {
+                // 页面不存在
+                layer.msg('页面正在开发中，敬请期待！', {icon: 1});
+              }
+            })
+            .catch(error => {
+              layer.close(loadingIndex);
+              console.error('Page load error:', error);
+              // 即使fetch失败，也尝试创建Tab（可能是跨域问题）
+              createNewTab(title, url);
+            });
+        } catch (error) {
+          console.error('loadPage error:', error);
+          // 如果出错，尝试直接创建Tab
+          createNewTab(title, url);
+        }
+      };
+
+      // 创建新Tab页
+      function createNewTab(title, url) {
+        try {
+          var tabTitle = document.querySelector('.layui-tab-title');
+          var tabContent = document.querySelector('.layui-tab-content');
+          
+          if (!tabTitle || !tabContent) {
+            console.error('Tab容器未找到');
+            return;
+          }
+          
+          // 生成唯一的Tab ID
+          var tabId = 'tab_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          console.log('创建Tab，ID:', tabId, '标题:', title, 'URL:', url);
+          
+          // 创建Tab标题
+          var newTabTitle = document.createElement('li');
+          newTabTitle.setAttribute('lay-id', tabId);
+          newTabTitle.setAttribute('data-url', url);
+          newTabTitle.setAttribute('data-title', title);
+          newTabTitle.innerHTML = title + '<i class="layui-icon layui-unselect layui-tab-close" lay-event="tabDelete">×</i>';
+          tabTitle.appendChild(newTabTitle);
+          
+          // 创建Tab内容
+          var newTabContent = document.createElement('div');
+          newTabContent.className = 'layui-tab-item';
+          newTabContent.setAttribute('lay-id', tabId);
+          newTabContent.setAttribute('data-url', url);
+          newTabContent.innerHTML = '<iframe src="' + url + '" frameborder="0" style="width: 100%; height: calc(100vh - 200px);" onload="this.style.opacity=1" style="opacity:0; transition: opacity 0.3s;"></iframe>';
+          tabContent.appendChild(newTabContent);
+          
+          // 切换到新Tab
+          element.tabChange('mainTab', tabId);
+          
+          // 重新渲染Tab组件
+          element.render('tab');
+          
+          console.log('成功创建Tab:', title, 'ID:', tabId, 'URL:', url);
+        } catch (error) {
+          console.error('创建Tab失败:', error);
+          layer.msg('页面加载失败，请稍后重试', {icon: 2});
+        }
+      }
+
+      // 退出登录
+      window.logout = function () {
+        layer.confirm('确定要退出吗？', function (index) {
+          window.location.href = '/logout';
+          layer.close(index);
+        });
+      };
+
+      // 顶部功能按钮事件处理
+      document.addEventListener('click', function(e) {
+        var target = e.target.closest('a[lay-event]');
+        if (!target) return;
+        
+        var event = target.getAttribute('lay-event');
+        console.log('功能按钮点击:', event, '目标元素:', target);
+        
+        switch (event) {
+          case 'fullscreen':
+            // 全屏功能
+            if (document.fullscreenElement) {
+              document.exitFullscreen();
+              console.log('退出全屏');
+            } else {
+              document.documentElement.requestFullscreen();
+              console.log('进入全屏');
+            }
+            break;
+            
+          case 'refresh':
+            // 刷新功能
+            console.log('刷新页面');
+            location.reload();
+            break;
+            
+          case 'flexible':
+            // 侧边栏伸缩
+            var body = document.querySelector('.layui-body');
+            var side = document.querySelector('.layui-side');
+            if (side.classList.contains('layui-side-shrink')) {
+              side.classList.remove('layui-side-shrink');
+              body.style.left = '200px';
+              console.log('展开侧边栏');
+            } else {
+              side.classList.add('layui-side-shrink');
+              body.style.left = '60px';
+              console.log('收缩侧边栏');
+            }
+            break;
+        }
+      });
+      
+      // 调试：检查功能按钮是否存在
+      console.log('正在检查功能按钮...');
+      var functionButtons = document.querySelectorAll('a[lay-event]');
+      console.log('找到功能按钮数量:', functionButtons.length);
+      functionButtons.forEach(function(btn, index) {
+        console.log('功能按钮', index + 1, ':', btn.getAttribute('lay-event'), '标题:', btn.getAttribute('title'));
+      });
+      
+      // 调试：检查左侧菜单项
+      console.log('正在检查左侧菜单项...');
+      var menuItems = document.querySelectorAll('.layui-nav-tree .layui-nav-item');
+      console.log('找到菜单项数量:', menuItems.length);
+      menuItems.forEach(function(item, index) {
+        var menuName = item.querySelector('cite');
+        var menuNameText = menuName ? menuName.textContent.trim() : '未知';
+        console.log('菜单项', index + 1, ':', menuNameText);
+      });
+
+      // 为所有按钮添加点击效果
+      document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('layui-btn')) {
+          e.target.style.transform = 'scale(0.95)';
+          setTimeout(() => {
+            e.target.style.transform = 'scale(1)';
+          }, 150);
+        }
+      });
+      
+      // 处理Tab关闭按钮点击事件
+      document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('layui-tab-close')) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          var tabItem = e.target.closest('li');
+          if (tabItem) {
+            var layId = tabItem.getAttribute('lay-id');
+            console.log('手动关闭Tab:', layId);
+            
+            if (layId === 'home') {
+              layer.msg('首页不能关闭', {icon: 1});
+              return;
+            }
+            
+            // 关闭Tab
+            var tabTitle = tabItem;
+            var tabContent = document.querySelector('.layui-tab-content .layui-tab-item[lay-id="' + layId + '"]');
+            
+            if (tabTitle) tabTitle.remove();
+            if (tabContent) tabContent.remove();
+            
+            // 重新渲染Tab组件
+            element.render('tab');
+            
+            // 如果关闭的是当前Tab，切换到首页
+            if (tabItem.classList.contains('layui-this')) {
+              element.tabChange('mainTab', 'home');
+            }
+          }
+        }
+      });
+
+      // 监听Tab关闭事件
+      element.on('tabDelete(mainTab)', function(data) {
+        try {
+          console.log('Tab关闭事件触发:', data);
+          
+          // 获取要关闭的Tab的lay-id
+          var layId = null;
+          if (data.elem && data.elem.getAttribute) {
+            layId = data.elem.getAttribute('lay-id');
+          } else if (data.elem && data.elem.layId) {
+            layId = data.elem.layId;
+          } else if (data.elem && data.elem.id) {
+            layId = data.elem.id;
+          }
+          
+          console.log('要关闭的Tab lay-id:', layId);
+          
+          if (!layId || layId === 'home') {
+            layer.msg('首页不能关闭', {icon: 1});
+            return;
+          }
+          
+          // 关闭Tab标题
+          var tabTitle = document.querySelector('li[lay-id="' + layId + '"]');
+          if (tabTitle) {
+            console.log('找到Tab标题，准备删除:', tabTitle);
+            tabTitle.remove();
+          }
+          
+          // 关闭Tab内容
+          var tabContent = document.querySelector('.layui-tab-content .layui-tab-item[lay-id="' + layId + '"]');
+          if (tabContent) {
+            console.log('找到Tab内容，准备删除:', tabContent);
+            tabContent.remove();
+          }
+          
+          // 重新渲染Tab组件
+          element.render('tab');
+          
+          // 如果关闭的是当前Tab，切换到首页
+          if (data.elem && data.elem.classList && data.elem.classList.contains('layui-this')) {
+            console.log('关闭的是当前Tab，切换到首页');
+            element.tabChange('mainTab', 'home');
+          }
+          
+          console.log('Tab关闭完成');
+        } catch (error) {
+          console.error('Tab关闭错误:', error);
+          layer.msg('Tab关闭失败，请重试', {icon: 2});
+        }
+      });
+
+      // 监听Tab切换事件
+      element.on('tab(mainTab)', function(data) {
+        try {
+          // Tab切换时的处理逻辑
+          var layId = null;
+          if (data.elem && data.elem.getAttribute) {
+            layId = data.elem.getAttribute('lay-id');
+          } else if (data.elem && data.elem.layId) {
+            layId = data.elem.layId;
+          } else if (data.elem && data.elem.id) {
+            layId = data.elem.id;
+          } else if (data.elem && data.elem.jquery) {
+            // 如果是jQuery对象，获取其DOM元素
+            var domElem = data.elem[0];
+            if (domElem) {
+              layId = domElem.getAttribute('lay-id');
+            }
+          }
+          
+          console.log('切换到Tab:', layId, '元素类型:', typeof data.elem, '元素:', data.elem);
+          
+          // 如果没有获取到lay-id，尝试从当前激活的Tab获取
+          if (!layId) {
+            var activeTab = document.querySelector('.layui-tab-title .layui-this');
+            if (activeTab) {
+              layId = activeTab.getAttribute('lay-id');
+              console.log('从激活Tab获取lay-id:', layId);
+            }
+          }
+        } catch (error) {
+          console.error('Tab切换错误:', error);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{sysname}} - 登录</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <link rel="stylesheet" href="/static/layui/css/layui.css" media="all">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      font-family: 'Microsoft YaHei', sans-serif;
+    }
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      padding: 20px;
+    }
+    .login-box {
+      background: white;
+      border-radius: 10px;
+      padding: 40px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    }
+    .login-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .login-header h2 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .login-header p {
+      color: #666;
+      font-size: 14px;
+    }
+    .volunteer-icon {
+      font-size: 48px;
+      color: #667eea;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="login-container">
+    <div class="login-box">
+      <div class="login-header">
+        <div class="volunteer-icon">
+          <i class="layui-icon layui-icon-user"></i>
+        </div>
+        <h2>{{sysname}}</h2>
+        <p>欢迎使用校园志愿者活动管理系统</p>
+      </div>
+      
+      <form class="layui-form" id="loginForm">
+        <div class="layui-form-item">
+          <label class="layui-form-label">用户名</label>
+          <div class="layui-input-block">
+            <input type="text" name="username" required lay-verify="required" placeholder="请输入用户名" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        
+        <div class="layui-form-item">
+          <label class="layui-form-label">密码</label>
+          <div class="layui-input-block">
+            <input type="password" name="password" required lay-verify="required" placeholder="请输入密码" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        
+        <div class="layui-form-item">
+          <div class="layui-input-block">
+            <button class="layui-btn layui-btn-fluid" lay-submit lay-filter="login">登录</button>
+          </div>
+        </div>
+        
+        <div class="layui-form-item" style="text-align: center;">
+          <a href="/register" class="layui-link">还没有账号？立即注册</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/layui/layui.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
+  <script>
+    // RSA公钥（与后端保持一致）
+    const PUBLIC_KEY = `-----BEGIN RSA PUBLIC KEY-----
+MIGJAoGBALPNGU54Ax0onD8lOkS0bV1IPyVeX64empGFyJgCK9TQ8jJDZU+DHwH6
+os1uLHgel05Ci3coI5Neqqic/Z8lqwjQOee5SqX03O4pKJK25XFJCXJpWVyfGWsy
+MeXYHTzyZI2+HdE8H0H3k0g3MhBLyPYSVlPNuU69tJ93ZgMNobJnAgMBAAE=
+-----END RSA PUBLIC KEY-----`;
+
+    // RSA加密函数
+    function rsaEncrypt(text) {
+      const encrypt = new JSEncrypt();
+      encrypt.setPublicKey(PUBLIC_KEY);
+      return encrypt.encrypt(text);
+    }
+
+    layui.use(['form', 'layer'], function () {
+      var form = layui.form;
+      var layer = layui.layer;
+
+      // 监听提交
+      form.on('submit(login)', function (data) {
+        var loading = layer.load(2);
+        
+        // 加密密码
+        var encryptedPassword = rsaEncrypt(data.field.password);
+        if (!encryptedPassword) {
+          layer.close(loading);
+          layer.msg('密码加密失败', {icon: 2});
+          return false;
+        }
+        
+        // 发送加密后的数据
+        var loginData = {
+          username: data.field.username,
+          password: encryptedPassword
+        };
+        
+        fetch('/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(loginData)
+        })
+        .then(response => response.json())
+        .then(result => {
+          layer.close(loading);
+          if (result.success) {
+            layer.msg('登录成功', {icon: 1});
+            setTimeout(function() {
+              window.location.href = '/';
+            }, 1000);
+          } else {
+            layer.msg(result.data || '登录失败', {icon: 2});
+          }
+        })
+        .catch(error => {
+          layer.close(loading);
+          console.error('Login error:', error);
+          layer.msg('网络错误，请重试', {icon: 2});
+        });
+        
+        return false;
+      });
+    });
+  </script>
+</body>
+</html>

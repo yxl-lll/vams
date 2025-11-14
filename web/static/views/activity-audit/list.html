@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>活动审核管理</title>
+    <link rel="stylesheet" href="/static/layui/css/layui.css">
+    <style>
+        .search-box { margin: 15px 0; }
+        .table-toolbar { margin: 15px 0; }
+        .status-pending { color: #FFB800; }
+        .status-approved { color: #5FB878; }
+        .status-rejected { color: #FF5722; }
+        .audit-buttons { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-card">
+            <div class="layui-card-header">
+                <h3>活动审核管理</h3>
+            </div>
+            <div class="layui-card-body">
+                <!-- 搜索框 -->
+                <div class="search-box">
+                    <form class="layui-form" lay-filter="searchForm">
+                        <div class="layui-inline">
+                            <input type="text" name="activity_name" placeholder="请输入活动名称" class="layui-input">
+                        </div>
+                        <div class="layui-inline">
+                            <input type="text" name="organizer_name" placeholder="请输入组织者姓名" class="layui-input">
+                        </div>
+                        <div class="layui-inline">
+                            <select name="audit_status">
+                                <option value="">全部状态</option>
+                                <option value="pending">待审核</option>
+                                <option value="approved">已通过</option>
+                                <option value="rejected">已拒绝</option>
+                            </select>
+                        </div>
+                        <div class="layui-inline">
+                            <button class="layui-btn" lay-submit lay-filter="search">搜索</button>
+                            <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 工具栏 -->
+                <div class="table-toolbar">
+                    <button class="layui-btn layui-btn-normal" id="batchApprove">
+                        <i class="layui-icon layui-icon-ok"></i> 批量通过
+                    </button>
+                    <button class="layui-btn layui-btn-warm" id="batchReject">
+                        <i class="layui-icon layui-icon-close"></i> 批量拒绝
+                    </button>
+                </div>
+
+                <!-- 数据表格 -->
+                <table id="auditTable" lay-filter="auditTable"></table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 表格操作列模板 -->
+    <script type="text/html" id="tableToolbar">
+        <a class="layui-btn layui-btn-xs" lay-event="view">查看</a>
+        <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="approve">通过</a>
+        <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="reject">拒绝</a>
+    </script>
+
+    <!-- 审核状态模板 -->
+    <script type="text/html" id="statusTpl">
+        {{# if(d.audit_status === 'pending') { }}
+            <span class="status-pending">待审核</span>
+        {{# } else if(d.audit_status === 'approved') { }}
+            <span class="status-approved">已通过</span>
+        {{# } else if(d.audit_status === 'rejected') { }}
+            <span class="status-rejected">已拒绝</span>
+        {{# } else { }}
+            <span class="status-pending">待审核</span>
+        {{# } }}
+    </script>
+
+    <!-- 活动详情查看模板 -->
+    <script type="text/html" id="activityDetail">
+        <div style="padding: 20px;">
+            <div class="layui-row">
+                <div class="layui-col-md6">
+                    <p><strong>活动名称：</strong>{{d.activity_name}}</p>
+                    <p><strong>活动类型：</strong>{{d.activity_type}}</p>
+                    <p><strong>组织者：</strong>{{d.organizer_name}}</p>
+                    <p><strong>联系电话：</strong>{{d.organizer_phone}}</p>
+                </div>
+                <div class="layui-col-md6">
+                    <p><strong>活动地点：</strong>{{d.activity_location}}</p>
+                    <p><strong>开始时间：</strong>{{d.start_time}}</p>
+                    <p><strong>结束时间：</strong>{{d.end_time}}</p>
+                    <p><strong>预计人数：</strong>{{d.expected_participants}}人</p>
+                </div>
+            </div>
+            <div class="layui-row">
+                <div class="layui-col-md12">
+                    <p><strong>活动描述：</strong></p>
+                    <div style="background: #f8f8f8; padding: 10px; border-radius: 4px;">
+                        {{d.activity_description || '暂无描述'}}
+                    </div>
+                </div>
+            </div>
+            <div class="layui-row">
+                <div class="layui-col-md12">
+                    <p><strong>审核状态：</strong>
+                        {{# if(d.audit_status === 'pending') { }}
+                            <span class="status-pending">待审核</span>
+                        {{# } else if(d.audit_status === 'approved') { }}
+                            <span class="status-approved">已通过</span>
+                        {{# } else if(d.audit_status === 'rejected') { }}
+                            <span class="status-rejected">已拒绝</span>
+                        {{# } }}
+                    </p>
+                    {{# if(d.audit_remarks) { }}
+                        <p><strong>审核备注：</strong>{{d.audit_remarks}}</p>
+                    {{# } }}
+                </div>
+            </div>
+            {{# if(d.audit_status === 'pending') { }}
+                <div class="audit-buttons">
+                    <button class="layui-btn layui-btn-normal" onclick="approveActivity('{{d.id}}')">通过审核</button>
+                    <button class="layui-btn layui-btn-warm" onclick="rejectActivity('{{d.id}}')">拒绝审核</button>
+                </div>
+            {{# } }}
+        </div>
+    </script>
+
+    <script src="/static/layui/layui.js"></script>
+    <script>
+        layui.use(['table', 'form', 'layer', 'laytpl'], function(){
+            var table = layui.table;
+            var form = layui.form;
+            var layer = layui.layer;
+            var laytpl = layui.laytpl;
+            var $ = layui.$;
+
+            // 获取认证token
+            function getToken() {
+                return document.cookie.split(';').find(c => c.trim().startsWith('token='))?.split('=')[1];
+            }
+
+            // 设置全局AUTH_TOKEN
+            window.AUTH_TOKEN = getToken();
+
+            // 初始化表格（隐藏“申请时间”列）
+            var tableIns = table.render({
+                elem: '#auditTable',
+                url: '/activity_audit/list',
+                page: true,
+                beforeSend: function(xhr) {
+                    // 在发送请求前设置认证头
+                    xhr.setRequestHeader('Authorization', 'Bearer ' + window.AUTH_TOKEN);
+                },
+                cols: [[
+                    {type: 'checkbox', fixed: 'left'},
+                    {field: 'id', title: 'ID', width: 80, sort: true},
+                    {field: 'activity_name', title: '活动名称', width: 200},
+                    {field: 'activity_type', title: '活动类型', width: 120},
+                    {field: 'organizer_name', title: '组织者', width: 120},
+                    {field: 'organizer_phone', title: '联系电话', width: 130},
+                    {field: 'activity_location', title: '活动地点', width: 150},
+                    {field: 'start_time', title: '开始时间', width: 180},
+                    {field: 'audit_status', title: '审核状态', width: 100, templet: '#statusTpl'},
+                    {title: '操作', width: 200, toolbar: '#tableToolbar', fixed: 'right'}
+                ]],
+                request: {
+                    pageName: 'page',
+                    limitName: 'limit'
+                },
+                response: {
+                    statusName: 'code',
+                    statusCode: 0,
+                    msgName: 'msg',
+                    countName: 'count',
+                    dataName: 'data'
+                },
+                parseData: function(res){
+                    console.log('活动审核API响应:', res); // 添加调试日志
+                    return {
+                        "code": res.code,
+                        "msg": res.msg,
+                        "count": res.count,
+                        "data": res.data || []
+                    };
+                }
+            });
+
+            // 搜索功能
+            form.on('submit(search)', function(data){
+                tableIns.reload({
+                    where: data.field,
+                    page: {curr: 1}
+                });
+                return false;
+            });
+
+            // 表格工具栏事件（修复“查看”按钮无反应问题）
+            table.on('tool(auditTable)', function(obj){
+                var data = obj.data;
+                if(obj.event === 'view'){
+                    // 渲染活动详情模板并弹出
+                    var detailHtml = laytpl($('#activityDetail').html()).render(data);
+                    layer.open({
+                        type: 1,
+                        title: '活动详情',
+                        area: ['800px', '600px'],
+                        content: detailHtml,
+                        success: function(){
+                            // 重新绑定审核按钮事件
+                            window.approveActivity = function(id) {
+                                approveActivityById(id);
+                            };
+                            window.rejectActivity = function(id) {
+                                rejectActivityById(id);
+                            };
+                        }
+                    });
+                } else if(obj.event === 'approve'){
+                    // 通过审核
+                    approveActivityById(data.id);
+                } else if(obj.event === 'reject'){
+                    // 拒绝审核
+                    rejectActivityById(data.id);
+                }
+            });
+
+            // 通过审核
+            window.approveActivityById = function(id) {
+                layer.prompt({
+                    formType: 2,
+                    title: '请输入审核备注（可选）',
+                    area: ['400px', '150px']
+                }, function(value, index, elem){
+                    $.ajax({
+                        url: '/activity_audit/status/' + id,
+                        type: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            status: 'approved',
+                            opinion: value || '审核通过'
+                        }),
+                        success: function(res){
+                            if(res.success){
+                                layer.msg('审核通过成功', {icon: 1});
+                                layer.closeAll();
+                                tableIns.reload();
+                            } else {
+                                layer.msg(res.msg || '操作失败', {icon: 2});
+                            }
+                        }
+                    });
+                });
+            };
+
+            // 拒绝审核
+            window.rejectActivityById = function(id) {
+                layer.prompt({
+                    formType: 2,
+                    title: '请输入拒绝原因',
+                    area: ['400px', '150px']
+                }, function(value, index, elem){
+                    if(!value.trim()){
+                        layer.msg('请输入拒绝原因', {icon: 2});
+                        return;
+                    }
+                    $.ajax({
+                        url: '/activity_audit/status/' + id,
+                        type: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            status: 'rejected',
+                            opinion: value
+                        }),
+                        success: function(res){
+                            if(res.success){
+                                layer.msg('审核拒绝成功', {icon: 1});
+                                layer.closeAll();
+                                tableIns.reload();
+                            } else {
+                                layer.msg(res.msg || '操作失败', {icon: 2});
+                            }
+                        }
+                    });
+                });
+            };
+
+            // 批量通过
+            $('#batchApprove').on('click', function(){
+                var checkStatus = table.checkStatus('auditTable');
+                var data = checkStatus.data;
+                if(data.length === 0){
+                    layer.msg('请选择要审核的数据', {icon: 2});
+                    return;
+                }
+
+                var pendingData = data.filter(function(item) {
+                    return item.audit_status === 'pending';
+                });
+
+                if(pendingData.length === 0){
+                    layer.msg('选中的数据中没有待审核的项目', {icon: 2});
+                    return;
+                }
+
+                layer.confirm('确定批量通过选中的 ' + pendingData.length + ' 个活动吗？', function(index){
+                    var ids = pendingData.map(function(item){ return item.id; });
+                    var completed = 0;
+                    var total = ids.length;
+
+                    ids.forEach(function(id) {
+                        $.ajax({
+                            url: '/activity_audit/status/' + id,
+                            type: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                status: 'approved',
+                                opinion: '批量审核通过'
+                            }),
+                            success: function(res){
+                                completed++;
+                                if(completed === total) {
+                                    layer.msg('批量审核成功', {icon: 1});
+                                    tableIns.reload();
+                                }
+                            },
+                            error: function() {
+                                completed++;
+                                if(completed === total) {
+                                    layer.msg('批量审核完成，部分可能失败', {icon: 1});
+                                    tableIns.reload();
+                                }
+                            }
+                        });
+                    });
+                    layer.close(index);
+                });
+            });
+
+            // 批量拒绝
+            $('#batchReject').on('click', function(){
+                var checkStatus = table.checkStatus('auditTable');
+                var data = checkStatus.data;
+                if(data.length === 0){
+                    layer.msg('请选择要审核的数据', {icon: 2});
+                    return;
+                }
+
+                var pendingData = data.filter(function(item) {
+                    return item.audit_status === 'pending';
+                });
+
+                if(pendingData.length === 0){
+                    layer.msg('选中的数据中没有待审核的项目', {icon: 2});
+                    return;
+                }
+
+                layer.prompt({
+                    formType: 2,
+                    title: '请输入拒绝原因',
+                    area: ['400px', '150px']
+                }, function(value, index, elem){
+                    if(!value.trim()){
+                        layer.msg('请输入拒绝原因', {icon: 2});
+                        return;
+                    }
+
+                    var ids = pendingData.map(function(item){ return item.id; });
+                    var completed = 0;
+                    var total = ids.length;
+
+                    ids.forEach(function(id) {
+                        $.ajax({
+                            url: '/activity_audit/status/' + id,
+                            type: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                status: 'rejected',
+                                opinion: value
+                            }),
+                            success: function(res){
+                                completed++;
+                                if(completed === total) {
+                                    layer.msg('批量拒绝成功', {icon: 1});
+                                    layer.closeAll();
+                                    tableIns.reload();
+                                }
+                            },
+                            error: function() {
+                                completed++;
+                                if(completed === total) {
+                                    layer.msg('批量拒绝完成，部分可能失败', {icon: 1});
+                                    layer.closeAll();
+                                    tableIns.reload();
+                                }
+                            }
+                        });
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>

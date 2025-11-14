@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>API测试页面</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>志愿者管理系统API测试</h1>
+    
+    <div>
+        <h2>活动类型管理</h2>
+        <button onclick="testActivityType()">测试活动类型API</button>
+        <div id="activityTypeResult"></div>
+    </div>
+    
+    <div>
+        <h2>志愿者档案</h2>
+        <button onclick="testVolunteerProfile()">测试志愿者档案API</button>
+        <div id="volunteerProfileResult"></div>
+    </div>
+    
+    <div>
+        <h2>活动计划管理</h2>
+        <button onclick="testVolunteerPlans()">测试活动计划API</button>
+        <div id="volunteerPlansResult"></div>
+    </div>
+    
+    <div>
+        <h2>活动参与记录</h2>
+        <button onclick="testParticipation()">测试活动参与API</button>
+        <div id="participationResult"></div>
+    </div>
+    
+    <div>
+        <h2>活动审核管理</h2>
+        <button onclick="testActivityAudit()">测试活动审核API</button>
+        <div id="activityAuditResult"></div>
+    </div>
+    
+    <div>
+        <h2>统计报表</h2>
+        <button onclick="testStatistics()">测试统计API</button>
+        <div id="statisticsResult"></div>
+    </div>
+
+    <script>
+        // 设置基础URL
+        const BASE_URL = 'http://localhost:8000';
+        
+        // 测试活动类型API
+        async function testActivityType() {
+            try {
+                const response = await axios.get(`${BASE_URL}/activity_type/list`);
+                document.getElementById('activityTypeResult').innerHTML = 
+                    `<pre>状态码: ${response.status}\n数据: ${JSON.stringify(response.data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('activityTypeResult').innerHTML = 
+                    `<pre style="color: red;">错误: ${error.message}\n响应: ${JSON.stringify(error.response?.data, null, 2)}</pre>`;
+            }
+        }
+        
+        // 测试志愿者档案API
+        async function testVolunteerProfile() {
+            try {
+                const response = await axios.get(`${BASE_URL}/volunteer_profile/list`);
+                document.getElementById('volunteerProfileResult').innerHTML = 
+                    `<pre>状态码: ${response.status}\n数据: ${JSON.stringify(response.data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('volunteerProfileResult').innerHTML = 
+                    `<pre style="color: red;">错误: ${error.message}\n响应: ${JSON.stringify(error.response?.data, null, 2)}</pre>`;
+            }
+        }
+        
+        // 测试活动计划API
+        async function testVolunteerPlans() {
+            try {
+                const response = await axios.get(`${BASE_URL}/volunteer_plans/page?page=1&limit=10`);
+                document.getElementById('volunteerPlansResult').innerHTML = 
+                    `<pre>状态码: ${response.status}\n数据: ${JSON.stringify(response.data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('volunteerPlansResult').innerHTML = 
+                    `<pre style="color: red;">错误: ${error.message}\n响应: ${JSON.stringify(error.response?.data, null, 2)}</pre>`;
+            }
+        }
+        
+        // 测试活动参与API
+        async function testParticipation() {
+            try {
+                const response = await axios.get(`${BASE_URL}/participation/page?page=1&limit=10`);
+                document.getElementById('participationResult').innerHTML = 
+                    `<pre>状态码: ${response.status}\n数据: ${JSON.stringify(response.data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('participationResult').innerHTML = 
+                    `<pre style="color: red;">错误: ${error.message}\n响应: ${JSON.stringify(error.response?.data, null, 2)}</pre>`;
+            }
+        }
+        
+        // 测试活动审核API
+        async function testActivityAudit() {
+            try {
+                const response = await axios.get(`${BASE_URL}/activity_audit/list`);
+                document.getElementById('activityAuditResult').innerHTML = 
+                    `<pre>状态码: ${response.status}\n数据: ${JSON.stringify(response.data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('activityAuditResult').innerHTML = 
+                    `<pre style="color: red;">错误: ${error.message}\n响应: ${JSON.stringify(error.response?.data, null, 2)}</pre>`;
+            }
+        }
+        
+        // 测试统计API
+        async function testStatistics() {
+            try {
+                const response = await axios.get(`${BASE_URL}/statistics/dashboard`);
+                document.getElementById('statisticsResult').innerHTML = 
+                    `<pre>状态码: ${response.status}\n数据: ${JSON.stringify(response.data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('statisticsResult').innerHTML = 
+                    `<pre style="color: red;">错误: ${error.message}\n响应: ${JSON.stringify(error.response?.data, null, 2)}</pre>`;
+            }
+        }
+    </script>
+</body>
+</html>

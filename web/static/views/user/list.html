@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>用户管理</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <link rel="stylesheet" href="/static/layui/css/layui.css" media="all">
+  <link rel="stylesheet" href="/static/style/admin.css" media="all">
+</head>
+
+<body>
+  <div class="layui-fluid">
+    <div class="layui-card">
+      <div class="layui-form layui-card-header layui-card-header-auto">
+        <div class="layui-form-item">
+          <div class="layui-inline">
+            <label class="layui-form-label">姓名</label>
+            <div class="layui-input-block">
+              <input type="text" name="name" placeholder="请输入" autocomplete="off" class="layui-input">
+            </div>
+          </div>
+          <div class="layui-inline">
+            <button class="layui-btn layui-btn-useradmin" lay-submit lay-filter="listSearch">
+              <i class="layui-icon layui-icon-search layui-button-btn"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="layui-card-body">
+        <div style="padding-bottom: 10px;">
+          <button class="layui-btn layui-btn-user" data-type="add">添加</button>
+        </div>
+
+        <table id="listTable" lay-filter="listTable"></table>
+        <script type="text/html" id="statusTpl">
+          {{#  if(d.status == 1){ }}
+          <button class="layui-btn layui-btn-xs">正常</button>
+          {{#  } else { }}
+            <button class="layui-btn layui-btn-primary layui-btn-xs">禁用</button>
+          {{#  } }}
+        </script>
+        <script type="text/html" id="table-bar">
+          <a class="layui-btn layui-btn-normal layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i>编辑</a>
+          <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon layui-icon-delete"></i>删除</a>
+        </script>
+      </div>
+    </div>
+  </div>
+  <script src="/static/layui/layui.js"></script>
+  <script>
+    layui.config({
+      base: '/static/'
+    }).extend({
+      index: 'lib/index'
+    }).use(['index', 'table', 'form', 'view'], function () {
+      var $ = layui.$, form = layui.form, table = layui.table;
+      //用户管理
+
+      table.render({
+        elem: '#listTable',
+        url: '/user/page',
+        cols: [[
+          { field: 'id', title: 'ID', width: '6%', unresize: true, sort: true, align: 'center' },
+          { field: 'nick_name', title: '名称', align: 'left' },
+          { field: 'phone', title: '手机号', align: 'left' },
+          { field: 'email', title: '邮箱', align: 'left' },
+          { field: 'username', title: '登录名称', align: 'left' },
+          { field: 'status', title: '状态信息', align: 'center', templet: '#statusTpl' },
+          { field: 'created_at', title: '创建时间', width: 160,  align: 'center' },
+          { field: 'updated_at', title: '修改时间', width: 160, align: 'center' },
+          { title: '操作', width: 150, align: 'center', fixed: 'right', toolbar: '#table-bar' }
+        ]],
+        page: true,
+        limit: 10,
+        height: 'full-220',
+        text: '对不起，加载出现异常！'
+      });
+
+      //监听工具条
+      table.on('tool(listTable)', function (obj) {
+        if (obj.event === 'edit') {
+          var tr = $(obj.tr);
+          layer.open({
+            type: 2,
+             title: '修改用户'
+            , content: '/static/views/user/form.html',
+            maxmin: true,
+            area: ['50%', '90%'],
+            btn: ['确定', '取消'],
+            yes: function (index, layero) {
+              var iframeWindow = window['layui-layer-iframe' + index]
+                , submitID = 'layui-form-pd'
+                , submit = layero.find('iframe').contents().find('#' + submitID);
+
+              //监听提交
+              iframeWindow.layui.form.on('submit(' + submitID + ')', function (data) {
+                var field = data.field;
+                field.id = obj.data.id
+                $.ajax({
+                  type: "put",
+                  url: "/user/update/" + field.id,
+                  data: JSON.stringify(field),
+                  contentType: 'application/json;charset=utf-8',
+                  processData: false,
+                  dataType: "json",
+                  success: function (result) {
+                    if (result.success) {
+                      layer.msg('保存成功');
+                      table.reload('listTable');
+                      layer.close(index);
+                    } else {
+                      layer.msg('保存失败');
+                    }
+                  },
+                  error: function (data) {
+                    layer.msg("网络错误！");
+                  }
+                });
+              });
+              submit.trigger('click');
+            },
+            success: function (layero, index) {
+              var iframeWindow = window['layui-layer-iframe' + index]
+              iframeWindow.layui.getData = function () { return obj.data }
+            }
+          });
+        } else {
+          layer.confirm('确定删除吗？', function () {
+            $.ajax({
+              url: '/user/delete/' + obj.data.id,
+              type: 'delete',
+              success: function (result) {
+                if (result.success) {
+                  layer.msg('操作成功');
+                  table.reload("listTable");
+                } else {
+                  layer.msg('操作失败', {
+                    icon: 2,
+                    time: 1000
+                  });
+                }
+              },
+              error: function (data) {
+                layer.msg("网络错误！");
+              }
+            });
+          });
+        }
+      });
+      //监听搜索
+      form.on('submit(listSearch)', function (data) {
+        var field = data.field;
+
+        //执行重载
+        table.reload('listTable', {
+          where: field
+        });
+      });
+      //事件
+      var active = {
+        add: function () {
+          layer.open({
+            type: 2
+            , title: '添加用户'
+            , content: '/static/views/user/form.html'
+            , 
+            area: ['50%', '90%']
+            , btn: ['确定', '取消']
+            , yes: function (index, layero) {
+              var iframeWindow = window['layui-layer-iframe' + index]
+                , submitID = 'layui-form-pd'
+                , submit = layero.find('iframe').contents().find('#' + submitID);
+
+              //监听提交
+              iframeWindow.layui.form.on('submit(' + submitID + ')', function (data) {
+                $.ajax({
+                  type: "post",
+                  url: "/user/add",
+                  data: JSON.stringify(data.field),
+                  contentType: 'application/json;charset=utf-8',
+                  processData: false,
+                  dataType: "json",
+                  success: function (result) {
+                    if (result.success) {
+                      layer.msg('保存成功');
+                      table.reload('listTable');
+                      layer.close(index);
+                    } else {
+                      layer.msg('保存失败');
+                    }
+                  },
+                  error: function (data) {
+                    layer.msg("网络错误！");
+                  }
+                });
+                table.reload('listTable');
+                layer.close(index); //关闭弹层
+              });
+
+              submit.trigger('click');
+            },
+            success: function (layero, index) {
+              var iframeWindow = window['layui-layer-iframe' + index]
+              iframeWindow.layui.getData = function () { return {} }
+            }
+          });
+        }
+      }
+      $('.layui-btn.layui-btn-user').on('click', function () {
+        var type = $(this).data('type');
+        active[type] ? active[type].call(this) : '';
+      });
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>角色管理</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" href="/static/layui/css/layui.css" media="all">
+    <link rel="stylesheet" href="/static/modules/dtree/dtree.css" media="all">
+    <link rel="stylesheet" href="/static/modules/dtree/font/dtreefont.css" media="all">
+    <style>
+        .layui-form-item {
+            display: flex;
+        }
+
+        .layui-form-label {
+            width: 120px;
+        }
+
+        .layui-input-block {
+            margin-left: 0;
+            margin-right: 20px;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layui-form" lay-filter="layui-form-pd" style="padding: 20px 0 0 0;">
+        <div class="layui-form-item" id="role_name">
+            <label class="layui-form-label">角色名称</label>
+            <div class="layui-input-block">
+                <input type="text" name="role_name" lay-verify="required" placeholder="请输入角色名称" autocomplete="off"
+                    class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">角色描述</label>
+            <div class="layui-input-block">
+                <textarea name="role_desc" placeholder="请输入角色描述" class="layui-textarea"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">设置菜单</label>
+            <div class="layui-input-block">
+                <div class="layui-panel" style="padding: 20px;">
+                    <div id="role-menu"></div>
+                    <input type="hidden" name="menu_ids" id="menu_ids">
+                </div>
+            </div>
+        </div>
+        <div class="layui-form-item layui-hide">
+            <input type="button" lay-submit lay-filter="layui-form-pd" id="layui-form-pd" value="确认">
+        </div>
+    </div>
+
+    <script src="/static/layui/layui.js"></script>
+    <script>
+        layui.config({
+            base: '/static/' //静态资源所在路径
+        }).extend({
+            index: 'lib/index',
+            dtree: 'dtree/dtree'
+        }).use(['index', 'dtree'], function () {
+            var $ = layui.$
+                , form = layui.form;
+            var tree = layui.tree;
+            var dtree = layui.dtree
+            if (layui.getData()) {
+                var data = layui.getData()
+                if (data) {
+                    form.val('layui-form-pd', JSON.parse(JSON.stringify(data)));
+                }
+                $.ajax({
+                    type: "get",
+                    url: "/role/auth_menu?role_id=" + data.id,
+                    contentType: 'application/json;charset=utf-8',
+                    processData: false,
+                    dataType: "json",
+                    success: function (result) {
+                        if (result.success) {
+                            var menu_ids = result.data.menu_ids.map(v => v.id)
+                            var DTreeNode = dtree.render({
+                                elem: "#role-menu",
+                                data: result.data.menus,
+                                checkbar: true,
+                                checkbarType: "p-casc", // 默认就是all，其他的值为： no-all  p-casc   self  only
+                                done: function (res, $ul, first) {
+                                    if (first) {
+                                        dtree.chooseDataInit("role-menu", menu_ids.join(","));
+                                        $("#menu_ids").val(menu_ids.join(","))
+                                    }
+                                }
+                            });
+                            dtree.on("node(role-menu)", function (obj) {
+                                var nodeId = obj.param.nodeId;
+                                DTreeNode.clickNodeCheckbar(nodeId);
+                            });
+                            dtree.on("chooseDone('role-menu')", function (obj) {
+                                var sid = obj.checkbarParams.map(v=>v.nodeId).join(",")
+                                $("#menu_ids").val(sid)
+                            });
+
+                        } else {
+                        }
+                    },
+                    error: function (data) {
+                        layer.msg("网络错误！");
+                    }
+                });
+            }
+
+
+
+
+        })
+    </script>
+</body>
+
+</html>

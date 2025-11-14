@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>活动类型管理</title>
+    <link rel="stylesheet" href="/static/layui/css/layui.css">
+    <style>
+        .search-box { margin: 15px 0; }
+        .table-toolbar { margin: 15px 0; }
+        .status-normal { color: #5FB878; }
+        .status-disabled { color: #FF5722; }
+    </style>
+</head>
+<body>
+    <script>
+        // 认证检查 - 页面加载时立即执行
+        (function() {
+            // 检查是否有有效的JWT token
+            function getToken() {
+                return document.cookie.split(';').find(c => c.trim().startsWith('token='))?.split('=')[1];
+            }
+
+            function checkAuth() {
+                const token = getToken();
+                if (!token) {
+                    // 没有token，重定向到登录页面
+                    window.location.href = '/login';
+                    return false;
+                }
+                return true;
+            }
+
+            // 页面加载时检查认证
+            if (!checkAuth()) {
+                return;
+            }
+
+            // 设置全局认证头
+            window.AUTH_TOKEN = getToken();
+        })();
+    </script>
+
+    <div class="layui-fluid">
+        <div class="layui-card">
+            <div class="layui-card-header">
+                <h3>活动类型管理</h3>
+            </div>
+            <div class="layui-card-body">
+                <!-- 搜索框 -->
+                <div class="search-box">
+                    <form class="layui-form" lay-filter="searchForm">
+                        <div class="layui-inline">
+                            <input type="text" name="type_name" placeholder="请输入类型名称" class="layui-input">
+                        </div>
+                        <div class="layui-inline">
+                            <select name="status">
+                                <option value="">全部状态</option>
+                                <option value="1">正常</option>
+                                <option value="0">禁用</option>
+                            </select>
+                        </div>
+                        <div class="layui-inline">
+                            <button class="layui-btn" lay-submit lay-filter="search">搜索</button>
+                            <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 工具栏 -->
+                <div class="table-toolbar">
+                    <button class="layui-btn" id="addType">
+                        <i class="layui-icon layui-icon-add-1"></i> 添加类型
+                    </button>
+                    <button class="layui-btn layui-btn-danger" id="batchDelete">
+                        <i class="layui-icon layui-icon-delete"></i> 批量删除
+                    </button>
+                </div>
+
+                <!-- 数据表格 -->
+                <table id="typeTable" lay-filter="typeTable"></table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 表格操作列模板 -->
+    <script type="text/html" id="tableToolbar">
+        <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+        <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+    </script>
+
+    <!-- 状态列模板 -->
+    <script type="text/html" id="statusTpl">
+        {{# if(d.status == 1) { }}
+            <span class="status-normal">正常</span>
+        {{# } else { }}
+            <span class="status-disabled">禁用</span>
+        {{# } }}
+    </script>
+
+    <!-- 添加/编辑表单 -->
+    <script type="text/html" id="typeForm">
+        <form class="layui-form" lay-filter="typeForm" style="padding: 20px;">
+            <div class="layui-form-item">
+                <label class="layui-form-label">类型名称</label>
+                <div class="layui-input-block">
+                    <input type="text" name="type_name" required lay-verify="required" placeholder="请输入活动类型名称" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">类型描述</label>
+                <div class="layui-input-block">
+                    <textarea name="description" placeholder="请输入类型描述" class="layui-textarea"></textarea>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">状态</label>
+                <div class="layui-input-block">
+                    <input type="radio" name="status" value="1" title="正常" checked>
+                    <input type="radio" name="status" value="0" title="禁用">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="layui-btn" lay-submit lay-filter="typeSubmit">提交</button>
+                    <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                </div>
+            </div>
+        </form>
+    </script>
+
+    <script src="/static/layui/layui.js"></script>
+    <script>
+        layui.use(['table', 'form', 'layer'], function(){
+            var table = layui.table;
+            var form = layui.form;
+            var layer = layui.layer;
+            var $ = layui.$;
+
+            // 初始化表格
+            var tableIns = table.render({
+                elem: '#typeTable',
+                url: '/activity_type/list',
+                page: true,
+                cols: [[
+                    {type: 'checkbox', fixed: 'left'},
+                    {field: 'id', title: 'ID', width: 80, sort: true},
+                    {field: 'type_name', title: '类型名称', width: 150},
+                    {field: 'description', title: '类型描述'},
+                    // 已删除 {field: 'difficulty_level', title: '难度等级', width: 100},
+                    {field: 'created_at', title: '创建时间', width: 180},
+                    {title: '操作', width: 150, toolbar: '#tableToolbar', fixed: 'right'}
+                ]],
+                request: {
+                    pageName: 'page',
+                    limitName: 'limit'
+                },
+                response: {
+                    statusName: 'code',
+                    statusCode: 0,
+                    msgName: 'msg',
+                    countName: 'count',
+                    dataName: 'data'
+                },
+                parseData: function(res){
+                    console.log('API响应数据:', res); // 添加调试日志
+                    return {
+                        "code": res.code,
+                        "msg": res.msg,
+                        "count": res.count,
+                        "data": res.data || []
+                    };
+                },
+                beforeSend: function(xhr) {
+                    // 在发送请求前设置认证头
+                    xhr.setRequestHeader('Authorization', 'Bearer ' + window.AUTH_TOKEN);
+                },
+                error: function(xhr, status, error) {
+                    console.log('表格加载错误:', xhr, status, error); // 添加错误日志
+                    // 处理认证错误
+                    if (xhr.status === 401 || xhr.status === 307) {
+                        layer.msg('认证失败，请重新登录', {icon: 2}, function() {
+                            window.location.href = '/login';
+                        });
+                    } else {
+                        layer.msg('数据加载失败: ' + error, {icon: 2});
+                    }
+                }
+            });
+
+            // 搜索功能
+            form.on('submit(search)', function(data){
+                tableIns.reload({
+                    where: data.field,
+                    page: {curr: 1}
+                });
+                return false;
+            });
+
+            // 添加类型
+            $('#addType').on('click', function(){
+                layer.open({
+                    type: 1,
+                    title: '添加活动类型',
+                    area: ['500px', '400px'],
+                    content: $('#typeForm').html(),
+                    success: function(){
+                        form.render();
+                    }
+                });
+            });
+
+            // 表格工具栏事件
+            table.on('tool(typeTable)', function(obj){
+                var data = obj.data;
+                if(obj.event === 'edit'){
+                    // 编辑
+                    window.currentEditId = data.id; // 保存当前编辑的ID
+                    layer.open({
+                        type: 1,
+                        title: '编辑活动类型',
+                        area: ['500px', '400px'],
+                        content: $('#typeForm').html(),
+                        success: function(){
+                            form.val('typeForm', data);
+                            form.render();
+                        }
+                    });
+                } else if(obj.event === 'del'){
+                    // 删除
+                    layer.confirm('确定删除此活动类型吗？', function(index){
+                        $.ajax({
+                            url: '/activity_type/delete/' + data.id,
+                            type: 'DELETE',
+                            headers: {
+                                'Authorization': 'Bearer ' + window.AUTH_TOKEN  // 添加认证头
+                            },
+                            success: function(res){
+                                if(res.success === true){
+                                    layer.msg('删除成功', {icon: 1});
+                                    obj.del();
+                                } else {
+                                    layer.msg(res.msg || '删除失败', {icon: 2});
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                if (xhr.status === 401 || xhr.status === 307) {
+                                    layer.msg('认证失败，请重新登录', {icon: 2}, function() {
+                                        window.location.href = '/login';
+                                    });
+                                } else {
+                                    layer.msg('删除失败: ' + error, {icon: 2});
+                                }
+                            }
+                        });
+                        layer.close(index);
+                    });
+                }
+            });
+
+            // 表单提交
+            form.on('submit(typeSubmit)', function(data){
+                // 确保编辑时正确获取ID
+                var recordId = data.field.id || (window.currentEditId ? window.currentEditId : null);
+                var url = recordId ? '/activity_type/update/' + recordId : '/activity_type/add';
+                var method = recordId ? 'PUT' : 'POST';
+                $.ajax({
+                    url: url,
+                    type: method,
+                    data: JSON.stringify(data.field),
+                    contentType: 'application/json',
+                    headers: {
+                        'Authorization': 'Bearer ' + window.AUTH_TOKEN  // 添加认证头
+                    },
+                    success: function(res){
+                        if(res.success === true){
+                            layer.msg('操作成功', {icon: 1});
+                            layer.closeAll();
+                            tableIns.reload();
+                        } else {
+                            layer.msg(res.msg || '操作失败', {icon: 2});
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        if (xhr.status === 401 || xhr.status === 307) {
+                            layer.msg('认证失败，请重新登录', {icon: 2}, function() {
+                                window.location.href = '/login';
+                            });
+                        } else {
+                            layer.msg('操作失败: ' + error, {icon: 2});
+                        }
+                    }
+                });
+                return false;
+            });
+
+            // 批量删除
+            $('#batchDelete').on('click', function(){
+                var checkStatus = table.checkStatus('typeTable');
+                var data = checkStatus.data;
+                if(data.length === 0){
+                    layer.msg('请选择要删除的数据', {icon: 2});
+                    return;
+                }
+
+                layer.confirm('确定删除选中的 ' + data.length + ' 条数据吗？', function(index){
+                    var ids = data.map(function(item){ return item.id; });
+                    // 批量删除需要逐个删除，因为后端没有批量删除接口
+                    var deleteCount = 0;
+                    var totalCount = ids.length;
+
+                    ids.forEach(function(id) {
+                        $.ajax({
+                            url: '/activity_type/delete/' + id,  // 修复API路径
+                            type: 'DELETE',  // 修复HTTP方法
+                            headers: {
+                                'Authorization': 'Bearer ' + window.AUTH_TOKEN  // 添加认证头
+                            },
+                            success: function(res){
+                                deleteCount++;
+                                if(res.success === true){  // 修复响应判断
+                                    if(deleteCount === totalCount) {
+                                        layer.msg('批量删除完成', {icon: 1});
+                                        tableIns.reload();
+                                    }
+                                } else {
+                                    layer.msg('删除ID ' + id + ' 失败: ' + res.msg, {icon: 2});
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                deleteCount++;
+                                if (xhr.status === 401 || xhr.status === 307) {
+                                    layer.msg('认证失败，请重新登录', {icon: 2}, function() {
+                                        window.location.href = '/login';
+                                    });
+                                } else {
+                                    layer.msg('删除ID ' + id + ' 失败: ' + error, {icon: 2});
+                                }
+                            }
+                        });
+                    });
+                    layer.close(index);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

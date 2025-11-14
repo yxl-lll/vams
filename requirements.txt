@@ -1,0 +1,11 @@
+fastapi[standard]
+uvicorn
+sqlalchemy
+aiomysql
+databases
+jinja2
+pyjwt
+pyyaml
+rsa
+pydantic
+starlette 

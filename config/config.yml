@@ -1,0 +1,10 @@
+# config/config.yml 完整配置（适配你的项目结构）
+prefix: "/api/"          # 全局接口前缀（核心！前端所有接口都要加这个）
+port: 8001               # 后端服务端口（默认8000，与Swagger地址一致）
+templates: "web/templates"  # 模板目录路径（对应config.py中的Jinja2Templates）
+db:
+  host: "localhost"      # 数据库地址（默认本地，Docker部署时改为容器名）
+  port: 13306             # 数据库端口
+  user: "root"           # 数据库用户名（与config.py中的默认值一致）
+  password: "123456"     # 数据库密码（与config.py中的默认值一致）
+  name: "volunteer"      # 数据库名（与config.py中的默认值一致）

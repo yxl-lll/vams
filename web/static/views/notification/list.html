@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>通知消息管理</title>
+    <link rel="stylesheet" href="/static/layui/css/layui.css">
+    <style>
+        .search-box { margin: 15px 0; }
+        .table-toolbar { margin: 15px 0; }
+        .status-unread { color: #FF5722; font-weight: bold; }
+        .status-read { color: #999; }
+        .priority-high { color: #FF5722; font-weight: bold; }
+        .priority-normal { color: #5FB878; }
+        .priority-low { color: #1E9FFF; }
+        .message-preview {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-card">
+            <div class="layui-card-header">
+                <h3>通知消息管理</h3>
+            </div>
+            <div class="layui-card-body">
+                <!-- 搜索框 -->
+                <div class="search-box">
+                    <form class="layui-form" lay-filter="searchForm">
+                        <div class="layui-inline">
+                            <input type="text" name="title" placeholder="请输入消息标题" class="layui-input">
+                        </div>
+                        <div class="layui-inline">
+                            <select name="type">
+                                <option value="">全部类型</option>
+                                <option value="system">系统通知</option>
+                                <option value="activity">活动通知</option>
+                                <option value="reminder">提醒消息</option>
+                                <option value="announcement">公告消息</option>
+                            </select>
+                        </div>
+                        <div class="layui-inline">
+                            <select name="priority">
+                                <option value="">全部优先级</option>
+                                <option value="high">高</option>
+                                <option value="normal">中</option>
+                                <option value="low">低</option>
+                            </select>
+                        </div>
+                        <div class="layui-inline">
+                            <select name="is_read">
+                                <option value="">全部状态</option>
+                                <option value="false">未读</option>
+                                <option value="true">已读</option>
+                            </select>
+                        </div>
+                        <div class="layui-inline">
+                            <button class="layui-btn" lay-submit lay-filter="search">搜索</button>
+                            <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 工具栏 -->
+                <div class="table-toolbar">
+                    <button class="layui-btn" id="sendMessage">
+                        <i class="layui-icon layui-icon-add-1"></i> 发送消息
+                    </button>
+                    <button class="layui-btn layui-btn-normal" id="batchSend">
+                        <i class="layui-icon layui-icon-ok"></i> 批量发送
+                    </button>
+                    <button class="layui-btn layui-btn-warm" id="batchDelete">
+                        <i class="layui-icon layui-icon-delete"></i> 批量删除
+                    </button>
+                </div>
+
+                <!-- 数据表格 -->
+                <table id="notificationTable" lay-filter="notificationTable"></table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 表格操作列模板 -->
+    <script type="text/html" id="tableToolbar">
+        <a class="layui-btn layui-btn-xs" lay-event="view">查看</a>
+        <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="edit">编辑</a>
+        <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="resend">重发</a>
+        <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">删除</a>
+    </script>
+
+    <!-- 消息类型模板 -->
+    <script type="text/html" id="typeTpl">
+        {{# if(d.type === 'system') { }}
+            <span class="layui-badge layui-bg-black">系统通知</span>
+        {{# } else if(d.type === 'activity') { }}
+            <span class="layui-badge layui-bg-blue">活动通知</span>
+        {{# } else if(d.type === 'reminder') { }}
+            <span class="layui-badge layui-bg-orange">提醒消息</span>
+        {{# } else if(d.type === 'announcement') { }}
+            <span class="layui-badge layui-bg-green">公告消息</span>
+        {{# } else { }}
+            <span class="layui-badge">其他</span>
+        {{# } }}
+    </script>
+
+    <!-- 优先级模板 -->
+    <script type="text/html" id="priorityTpl">
+        {{# if(d.priority === 'high') { }}
+            <span class="priority-high">高</span>
+        {{# } else if(d.priority === 'normal') { }}
+            <span class="priority-normal">中</span>
+        {{# } else if(d.priority === 'low') { }}
+            <span class="priority-low">低</span>
+        {{# } else { }}
+            <span class="priority-normal">中</span>
+        {{# } }}
+    </script>
+
+    <!-- 状态模板 -->
+    <script type="text/html" id="statusTpl">
+        {{# if(d.is_read === false) { }}
+            <span class="status-unread">未读</span>
+        {{# } else { }}
+            <span class="status-read">已读</span>
+        {{# } }}
+    </script>
+
+    <!-- 消息表单模板 (发送和编辑共用) -->
+    <script type="text/html" id="messageForm">
+        <form class="layui-form" lay-filter="messageForm" style="padding: 20px;">
+            <input type="hidden" name="id"> <!-- 用于编辑时存储ID -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">消息标题</label>
+                <div class="layui-input-block">
+                    <input type="text" name="title" required lay-verify="required" placeholder="请输入消息标题" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">消息类型</label>
+                <div class="layui-input-block">
+                    <select name="type" lay-verify="required">
+                        <option value="">请选择消息类型</option>
+                        <option value="system">系统通知</option>
+                        <option value="activity">活动通知</option>
+                        <option value="reminder">提醒消息</option>
+                        <option value="announcement">公告消息</option>
+                    </select>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">优先级</label>
+                <div class="layui-input-block">
+                    <input type="radio" name="priority" value="high" title="高">
+                    <input type="radio" name="priority" value="normal" title="中" checked>
+                    <input type="radio" name="priority" value="low" title="低">
+                </div>
+            </div>
+            <div class="layui-form-item" id="targetTypeGroup">
+                <label class="layui-form-label">接收对象</label>
+                <div class="layui-input-block">
+                    <input type="radio" name="target_type" value="all" title="全部用户" checked>
+                    <input type="radio" name="target_type" value="role" title="指定角色">
+                    <input type="radio" name="target_type" value="user" title="指定用户">
+                </div>
+            </div>
+            <div class="layui-form-item" id="roleSelect" style="display: none;">
+                <label class="layui-form-label">选择角色</label>
+                <div class="layui-input-block">
+                    <select name="role_ids" multiple>
+                        <option value="admin">管理员</option>
+                        <option value="user">普通用户</option>
+                        <option value="volunteer">志愿者</option>
+                    </select>
+                </div>
+            </div>
+            <div class="layui-form-item" id="userSelect" style="display: none;">
+                <label class="layui-form-label">选择用户</label>
+                <div class="layui-input-block">
+                    <input type="text" name="user_ids" placeholder="请输入用户ID，多个用逗号分隔" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item layui-form-text">
+                <label class="layui-form-label">消息内容</label>
+                <div class="layui-input-block">
+                    <textarea name="content" required lay-verify="required" placeholder="请输入消息内容" class="layui-textarea" rows="6"></textarea>
+                </div>
+            </div>
+            <div class="layui-form-item" id="sendTimeGroup">
+                <label class="layui-form-label">发送时间</label>
+                <div class="layui-input-block">
+                    <input type="radio" name="send_time" value="now" title="立即发送" checked>
+                    <input type="radio" name="send_time" value="schedule" title="定时发送">
+                </div>
+            </div>
+            <div class="layui-form-item" id="scheduleTime" style="display: none;">
+                <label class="layui-form-label">定时时间</label>
+                <div class="layui-input-block">
+                    <input type="text" name="schedule_time" id="scheduleTimeInput" placeholder="请选择发送时间" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="layui-btn" lay-submit lay-filter="messageSubmit">提交</button>
+                    <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                </div>
+            </div>
+        </form>
+    </script>
+
+    <script src="/static/layui/layui.js"></script>
+    <script>
+        layui.use(['table', 'form', 'layer', 'laydate'], function(){
+            var table = layui.table;
+            var form = layui.form;
+            var layer = layui.layer;
+            var laydate = layui.laydate;
+            var $ = layui.$;
+
+            // 通用时间格式化函数
+            function formatSendTime(timeValue) {
+                if (!timeValue || timeValue === 'null' || timeValue === 'None' || timeValue === '') {
+                    return '未发送';
+                }
+                if (typeof timeValue === 'string' && timeValue.includes('-') && timeValue.includes(':')) {
+                    return timeValue.replace('T', ' ');
+                }
+                let date;
+                if (typeof timeValue === 'number' || /^\d+$/.test(timeValue)) {
+                    const timestamp = typeof timeValue === 'number' ? timeValue : parseInt(timeValue);
+                    date = new Date(timestamp * 1000);
+                } else {
+                    date = new Date(timeValue);
+                }
+                if (isNaN(date.getTime())) {
+                    return '时间格式错误';
+                }
+                return `${date.getFullYear()}-${
+                    (date.getMonth() + 1).toString().padStart(2, '0')
+                }-${
+                    date.getDate().toString().padStart(2, '0')
+                } ${
+                    date.getHours().toString().padStart(2, '0')
+                }:${
+                    date.getMinutes().toString().padStart(2, '0')
+                }:${
+                    date.getSeconds().toString().padStart(2, '0')
+                }`;
+            }
+
+            // 初始化表格（适配POST接口）
+            var tableIns = table.render({
+                elem: '#notificationTable',
+                url: '/notification/page',
+                method: 'POST',
+                page: true,
+                headers: {
+                    'Authorization': 'Bearer ' + (window.AUTH_TOKEN || '')
+                },
+                cols: [[
+                    {type: 'checkbox', fixed: 'left'},
+                    {field: 'id', title: 'ID', width: 80, sort: true},
+                    {field: 'title', title: '消息标题', width: 200},
+                    {field: 'type', title: '消息类型', width: 120, templet: '#typeTpl'},
+                    {field: 'priority', title: '优先级', width: 80, templet: '#priorityTpl'},
+                    {field: 'content', title: '消息内容', width: 300, templet: '<div class="message-preview">{{d.content}}</div>'},
+                    {field: 'is_read', title: '状态', width: 100, templet: '#statusTpl'},
+                    {
+                        field: 'created_at',
+                        title: '发送时间',
+                        width: 180,
+                        templet: function(d) {
+                            return formatSendTime(d.created_at);
+                        }
+                    },
+                    {title: '操作', width: 250, toolbar: '#tableToolbar', fixed: 'right'}
+                ]],
+                request: {
+                    pageName: 'page',
+                    limitName: 'limit'
+                },
+                response: {
+                    statusName: 'code',
+                    statusCode: 0,
+                    msgName: 'msg',
+                    countName: 'count',
+                    dataName: 'data'
+                },
+                parseData: function(res) {
+                    return res;
+                }
+            });
+
+            // 搜索功能
+            form.on('submit(search)', function(data){
+                tableIns.reload({
+                    where: data.field,
+                    page: {curr: 1}
+                });
+                return false;
+            });
+
+            // 绑定表单事件（接收对象和发送时间联动）
+            function bindFormEvents(formFilter) {
+                form.on('radio(target_type)', function(data){
+                    if(data.value === 'role') {
+                        $('#roleSelect').show();
+                        $('#userSelect').hide();
+                    } else if(data.value === 'user') {
+                        $('#roleSelect').hide();
+                        $('#userSelect').show();
+                    } else {
+                        $('#roleSelect').hide();
+                        $('#userSelect').hide();
+                    }
+                });
+                form.on('radio(send_time)', function(data){
+                    if(data.value === 'schedule') {
+                        $('#scheduleTime').show();
+                        laydate.render({
+                            elem: '#scheduleTimeInput',
+                            type: 'datetime'
+                        });
+                    } else {
+                        $('#scheduleTime').hide();
+                    }
+                });
+
+                // 为表单绑定提交事件
+                form.on('submit(messageSubmit)', function(data) {
+                    var actionUrl = data.field.id ? '/notification/update/' + data.field.id : '/notification/send';
+                    var method = data.field.id ? 'PUT' : 'POST';
+
+                    // 如果是编辑系统通知，移除target_type相关参数，避免后端接口混淆
+                    if (data.field.id && data.field.type === 'system') {
+                        delete data.field.target_type;
+                        delete data.field.role_ids;
+                        delete data.field.user_ids;
+                    }
+
+                    $.ajax({
+                        url: actionUrl,
+                        type: method,
+                        data: JSON.stringify(data.field),
+                        contentType: 'application/json',
+                        success: function(res){
+                            if(res.code === 0){
+                                layer.msg(data.field.id ? '更新成功' : '发送成功', {icon: 1});
+                                layer.closeAll('page'); // 关闭弹窗
+                                tableIns.reload(); // 刷新表格
+                            } else {
+                                layer.msg(res.msg || (data.field.id ? '更新失败' : '发送失败'), {icon: 2});
+                            }
+                        },
+                        error: function(){
+                            layer.msg('网络错误', {icon: 2});
+                        }
+                    });
+                    return false; // 阻止表单默认提交
+                });
+            }
+            
+            // 发送消息
+            $('#sendMessage').on('click', function(){
+                layer.open({
+                    type: 1,
+                    title: '发送消息',
+                    area: ['700px', '600px'],
+                    content: $('#messageForm').html(),
+                    success: function(layero, index){
+                        // 清除可能残留的ID
+                        layero.find('input[name="id"]').val('');
+                        form.render();
+                        bindFormEvents('messageForm');
+                    }
+                });
+            });
+
+            // 表格工具栏事件
+            table.on('tool(notificationTable)', function(obj){
+                var data = obj.data;
+                if(obj.event === 'view'){
+                    const sendTime = formatSendTime(data.created_at);
+                    layer.open({
+                        type: 1,
+                        title: '消息详情',
+                        area: ['600px', '500px'],
+                        content: '<div style="padding: 20px;">' +
+                            '<p><strong>消息标题：</strong>' + data.title + '</p>' +
+                            '<p><strong>消息类型：</strong>' + getTypeText(data.type) + '</p>' +
+                            '<p><strong>优先级：</strong>' + getPriorityText(data.priority) + '</p>' +
+                            '<p><strong>消息内容：</strong></p>' +
+                            '<div style="background: #f8f8f8; padding: 10px; border-radius: 4px; margin: 10px 0;">' +
+                            data.content + '</div>' +
+                            '<p><strong>发送时间：</strong>' + sendTime + '</p>' +
+                            '</div>'
+                    });
+                } else if(obj.event === 'edit'){
+                    layer.open({
+                        type: 1,
+                        title: '编辑消息',
+                        area: ['700px', '600px'],
+                        content: $('#messageForm').html(),
+                        success: function(layero, index){
+                            form.val('messageForm', data);
+                            
+                            // 对于系统通知，隐藏接收对象选择
+                            if (data.type === 'system') {
+                                $('#targetTypeGroup').hide();
+                                $('#roleSelect').hide();
+                                $('#userSelect').hide();
+                            } else {
+                                $('#targetTypeGroup').show();
+                                // 根据target_type显示对应的选择框（如果有数据的话）
+                                // 这里可以根据data中的target_user_id等信息来预设target_type
+                                var targetType = 'all';
+                                if (data.target_user_id) {
+                                    targetType = 'user';
+                                    layero.find('input[name="user_ids"]').val(data.target_user_id);
+                                }
+                                layero.find('input[name="target_type"][value="' + targetType + '"]').prop('checked', true);
+                                if(targetType === 'role') $('#roleSelect').show();
+                                if(targetType === 'user') $('#userSelect').show();
+                            }
+                            
+                            // 隐藏发送时间选择，编辑时通常不修改发送时间
+                            $('#sendTimeGroup').hide();
+                            $('#scheduleTime').hide();
+
+                            form.render();
+                            bindFormEvents('messageForm');
+                        }
+                    });
+                } else if(obj.event === 'resend'){
+                    layer.confirm('确定要重新发送此消息吗？', function(index){
+                        $.ajax({
+                            url: '/notification/resend',
+                            type: 'POST',
+                            data: JSON.stringify({id: data.id}),
+                            contentType: 'application/json',
+                            success: function(res){
+                                if(res.code === 0){
+                                    layer.msg('重发成功', {icon: 1});
+                                    tableIns.reload();
+                                } else {
+                                    layer.msg(res.msg || '重发失败', {icon: 2});
+                                }
+                            },
+                            error: function(){
+                                layer.msg('网络错误', {icon: 2});
+                            }
+                        });
+                        layer.close(index);
+                    });
+                } else if(obj.event === 'del'){
+                    layer.confirm('确定删除此消息吗？', function(index){
+                        $.ajax({
+                            url: '/notification/delete',
+                            type: 'POST',
+                            data: JSON.stringify({id: data.id}),
+                            contentType: 'application/json',
+                            success: function(res){
+                                if(res.code === 0){
+                                    layer.msg('删除成功', {icon: 1});
+                                    obj.del();
+                                } else {
+                                    layer.msg(res.msg || '删除失败', {icon: 2});
+                                }
+                            },
+                            error: function(){
+                                layer.msg('网络错误', {icon: 2});
+                            }
+                        });
+                        layer.close(index);
+                    });
+                }
+            });
+
+            // 批量发送
+            $('#batchSend').on('click', function(){
+                var checkStatus = table.checkStatus('notificationTable');
+                var data = checkStatus.data;
+                if(data.length === 0){
+                    layer.msg('请选择要发送的消息', {icon: 2});
+                    return;
+                }
+                layer.confirm('确定要批量发送选中的 ' + data.length + ' 条消息吗？', function(index){
+                    var ids = data.map(function(item){ return item.id; });
+                    $.ajax({
+                        url: '/notification/batch_send',
+                        type: 'POST',
+                        data: JSON.stringify({ids: ids}),
+                        contentType: 'application/json',
+                        success: function(res){
+                            if(res.code === 0){
+                                layer.msg('批量发送成功', {icon: 1});
+                                tableIns.reload();
+                            } else {
+                                layer.msg(res.msg || '批量发送失败', {icon: 2});
+                            }
+                        },
+                        error: function(){
+                            layer.msg('网络错误', {icon: 2});
+                        }
+                    });
+                    layer.close(index);
+                });
+            });
+
+            // 批量删除
+            $('#batchDelete').on('click', function(){
+                var checkStatus = table.checkStatus('notificationTable');
+                var data = checkStatus.data;
+                if(data.length === 0){
+                    layer.msg('请选择要删除的消息', {icon: 2});
+                    return;
+                }
+                layer.confirm('确定要批量删除选中的 ' + data.length + ' 条消息吗？', function(index){
+                    var ids = data.map(function(item){ return item.id; });
+                    $.ajax({
+                        url: '/notification/batch_delete',
+                        type: 'POST',
+                        data: JSON.stringify({ids: ids}),
+                        contentType: 'application/json',
+                        success: function(res){
+                            if(res.code === 0){
+                                layer.msg('批量删除成功', {icon: 1});
+                                tableIns.reload();
+                            } else {
+                                layer.msg(res.msg || '批量删除失败', {icon: 2});
+                            }
+                        },
+                        error: function(){
+                            layer.msg('网络错误', {icon: 2});
+                        }
+                    });
+                    layer.close(index);
+                });
+            });
+
+            // 辅助函数
+            function getTypeText(type) {
+                var typeMap = {
+                    'system': '系统通知',
+                    'activity': '活动通知',
+                    'reminder': '提醒消息',
+                    'announcement': '公告消息'
+                };
+                return typeMap[type] || '其他';
+            }
+            function getPriorityText(priority) {
+                var priorityMap = {
+                    'high': '高',
+                    'normal': '中',
+                    'low': '低'
+                };
+                return priorityMap[priority] || '中';
+            }
+        });
+    </script>
+</body>
+</html>

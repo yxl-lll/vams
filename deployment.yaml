@@ -1,0 +1,771 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: volunteer-system
+  labels:
+    name: volunteer-system
+    app: volunteer-management
+
+---
+# ConfigMap 配置
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: volunteer-config
+  namespace: volunteer-system
+data:
+  # 应用配置
+  app_config.yaml: |
+    app:
+      name: "校园志愿者活动管理系统"
+      version: "1.0.0"
+      environment: "production"
+    
+    database:
+      read_replicas: 3
+      write_master: "mysql-master"
+      connection_pool_size: 20
+      max_retries: 3
+    
+    redis:
+      cluster_mode: true
+      sentinel_master: "redis-sentinel"
+      cache_ttl: 3600
+    
+    security:
+      jwt_secret: "volunteer_jwt_secret_key_2024"
+      session_timeout: 7200
+      rate_limit: 100
+    
+    upload:
+      max_file_size: "100MB"
+      allowed_types: ["jpg", "png", "pdf", "doc", "docx"]
+      storage_path: "/app/uploads"
+
+---
+# Secret 配置
+apiVersion: v1
+kind: Secret
+metadata:
+  name: volunteer-secrets
+  namespace: volunteer-system
+type: Opaque
+data:
+  # Base64编码的敏感信息
+  mysql-root-password: cm9vdDEyMw==  # root123
+  mysql-user-password: dm9sdW50ZWVyMTIz  # volunteer123
+  redis-password: cmVkaXMxMjM=  # redis123
+  jwt-secret: dm9sdW50ZWVyX2p3dF9zZWNyZXRfa2V5XzIwMjQ=  # volunteer_jwt_secret_key_2024
+
+---
+# Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: volunteer-sa
+  namespace: volunteer-system
+
+---
+# ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: volunteer-cluster-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses", "networkpolicies"]
+  verbs: ["get", "list", "watch"]
+
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: volunteer-cluster-role-binding
+subjects:
+- kind: ServiceAccount
+  name: volunteer-sa
+  namespace: volunteer-system
+roleRef:
+  kind: ClusterRole
+  name: volunteer-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# MySQL Master StatefulSet (写操作)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-master
+  namespace: volunteer-system
+  labels:
+    app: mysql-master
+    tier: database
+    role: master
+spec:
+  serviceName: mysql-master
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-master
+  template:
+    metadata:
+      labels:
+        app: mysql-master
+        tier: database
+        role: master
+    spec:
+      serviceAccountName: volunteer-sa
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+          name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: volunteer-secrets
+              key: mysql-root-password
+        - name: MYSQL_DATABASE
+          value: "volunteer"
+        - name: MYSQL_USER
+          value: "volunteer"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: volunteer-secrets
+              key: mysql-user-password
+        volumeMounts:
+        - name: mysql-data
+          mountPath: /var/lib/mysql
+        - name: mysql-config
+          mountPath: /etc/mysql/conf.d
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-h", "localhost"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["mysql", "-e", "SELECT 1"]
+          initialDelaySeconds: 5
+          periodSeconds: 2
+      volumes:
+      - name: mysql-config
+        configMap:
+          name: mysql-config
+      - name: init-script
+        persistentVolumeClaim:
+          claimName: mysql-init-pvc
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: "fast-ssd"
+      resources:
+        requests:
+          storage: 20Gi
+
+---
+# MySQL Read Replicas StatefulSet (读操作)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-read-replicas
+  namespace: volunteer-system
+  labels:
+    app: mysql-read-replicas
+    tier: database
+    role: replica
+spec:
+  serviceName: mysql-read-replicas
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mysql-read-replicas
+  template:
+    metadata:
+      labels:
+        app: mysql-read-replicas
+        tier: database
+        role: replica
+    spec:
+      serviceAccountName: volunteer-sa
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+          name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: volunteer-secrets
+              key: mysql-root-password
+        - name: MYSQL_DATABASE
+          value: "volunteer"
+        - name: MYSQL_USER
+          value: "volunteer"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: volunteer-secrets
+              key: mysql-user-password
+        volumeMounts:
+        - name: mysql-data
+          mountPath: /var/lib/mysql
+        - name: mysql-config
+          mountPath: /etc/mysql/conf.d
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-h", "localhost"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["mysql", "-e", "SELECT 1"]
+          initialDelaySeconds: 5
+          periodSeconds: 2
+      volumes:
+      - name: mysql-config
+        configMap:
+          name: mysql-replica-config
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: "fast-ssd"
+      resources:
+        requests:
+          storage: 20Gi
+
+---
+# Redis Cluster StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-cluster
+  namespace: volunteer-system
+  labels:
+    app: redis-cluster
+    tier: cache
+spec:
+  serviceName: redis-cluster
+  replicas: 6
+  selector:
+    matchLabels:
+      app: redis-cluster
+  template:
+    metadata:
+      labels:
+        app: redis-cluster
+        tier: cache
+    spec:
+      serviceAccountName: volunteer-sa
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+          name: redis
+        command: ["redis-server", "/etc/redis/redis.conf"]
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        - name: redis-config
+          mountPath: /etc/redis
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command: ["redis-cli", "ping"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["redis-cli", "ping"]
+          initialDelaySeconds: 5
+          periodSeconds: 2
+      volumes:
+      - name: redis-config
+        configMap:
+          name: redis-config
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: "fast-ssd"
+      resources:
+        requests:
+          storage: 5Gi
+
+---
+# 应用部署 - 主服务
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: volunteer-app
+  namespace: volunteer-system
+  labels:
+    app: volunteer-app
+    tier: application
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: volunteer-app
+      tier: application
+  template:
+    metadata:
+      labels:
+        app: volunteer-app
+        tier: application
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: volunteer-sa
+      containers:
+      - name: volunteer-app
+        image: volunteer-management:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DATABASE_MASTER_URL
+          value: "mysql://volunteer:$(MYSQL_PASSWORD)@mysql-master:3306/volunteer"
+        - name: DATABASE_READ_URLS
+          value: "mysql://volunteer:$(MYSQL_PASSWORD)@mysql-read-replicas-0:3306/volunteer,mysql://volunteer:$(MYSQL_PASSWORD)@mysql-read-replicas-1:3306/volunteer,mysql://volunteer:$(MYSQL_PASSWORD)@mysql-read-replicas-2:3306/volunteer"
+        - name: REDIS_URL
+          value: "redis://redis-cluster-0:6379,redis-cluster-1:6379,redis-cluster-2:6379,redis-cluster-3:6379,redis-cluster-4:6379,redis-cluster-5:6379"
+        - name: APP_ENV
+          value: "production"
+        - name: WORKER_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: volunteer-secrets
+              key: mysql-user-password
+        volumeMounts:
+        - name: app-config
+          mountPath: /app/config
+        - name: uploads
+          mountPath: /app/uploads
+        - name: logs
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 2
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 30
+      volumes:
+      - name: app-config
+        configMap:
+          name: volunteer-config
+      - name: uploads
+        persistentVolumeClaim:
+          claimName: uploads-pvc
+      - name: logs
+        persistentVolumeClaim:
+          claimName: logs-pvc
+
+---
+# 应用部署 - 后台任务处理器
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: volunteer-worker
+  namespace: volunteer-system
+  labels:
+    app: volunteer-worker
+    tier: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: volunteer-worker
+      tier: worker
+  template:
+    metadata:
+      labels:
+        app: volunteer-worker
+        tier: worker
+    spec:
+      serviceAccountName: volunteer-sa
+      containers:
+      - name: volunteer-worker
+        image: volunteer-management:latest
+        imagePullPolicy: Always
+        command: ["python", "worker.py"]
+        env:
+        - name: DATABASE_MASTER_URL
+          value: "mysql://volunteer:$(MYSQL_PASSWORD)@mysql-master:3306/volunteer"
+        - name: REDIS_URL
+          value: "redis://redis-cluster-0:6379"
+        - name: APP_ENV
+          value: "production"
+        - name: WORKER_MODE
+          value: "background"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: volunteer-secrets
+              key: mysql-user-password
+        volumeMounts:
+        - name: app-config
+          mountPath: /app/config
+        - name: logs
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+
+---
+# Nginx Ingress Controller
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-ingress-controller
+  namespace: volunteer-system
+  labels:
+    app: nginx-ingress-controller
+    tier: loadbalancer
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-ingress-controller
+      tier: loadbalancer
+  template:
+    metadata:
+      labels:
+        app: nginx-ingress-controller
+        tier: loadbalancer
+    spec:
+      serviceAccountName: volunteer-sa
+      containers:
+      - name: nginx-ingress
+        image: nginx/nginx-ingress:latest
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 443
+          name: https
+        - containerPort: 8081
+          name: status
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 2
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-config
+
+---
+# Services
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-master
+  namespace: volunteer-system
+  labels:
+    app: mysql-master
+    tier: database
+spec:
+  ports:
+  - port: 3306
+    targetPort: 3306
+  selector:
+    app: mysql-master
+  clusterIP: None
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-read-replicas
+  namespace: volunteer-system
+  labels:
+    app: mysql-read-replicas
+    tier: database
+spec:
+  ports:
+  - port: 3306
+    targetPort: 3306
+  selector:
+    app: mysql-read-replicas
+  clusterIP: None
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-cluster
+  namespace: volunteer-system
+  labels:
+    app: redis-cluster
+    tier: cache
+spec:
+  ports:
+  - port: 6379
+    targetPort: 6379
+  selector:
+    app: redis-cluster
+  clusterIP: None
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: volunteer-app
+  namespace: volunteer-system
+  labels:
+    app: volunteer-app
+    tier: application
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+    name: http
+  selector:
+    app: volunteer-app
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-ingress
+  namespace: volunteer-system
+  labels:
+    app: nginx-ingress-controller
+    tier: loadbalancer
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+    name: http
+  - port: 443
+    targetPort: 443
+    name: https
+  - port: 8081
+    targetPort: 8081
+    name: status
+  selector:
+    app: nginx-ingress-controller
+  type: LoadBalancer
+
+---
+# Ingress 配置
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: volunteer-ingress
+  namespace: volunteer-system
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - volunteer.example.com
+    secretName: volunteer-tls
+  rules:
+  - host: volunteer.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-ingress
+            port:
+              number: 80
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: volunteer-app
+            port:
+              number: 8000
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: volunteer-app
+            port:
+              number: 8000
+
+---
+# PersistentVolumeClaims
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-init-pvc
+  namespace: volunteer-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uploads-pvc
+  namespace: volunteer-system
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: logs-pvc
+  namespace: volunteer-system
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: volunteer-app-hpa
+  namespace: volunteer-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: volunteer-app
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60

@@ -1,0 +1,7 @@
+db: mysql://root:123456@localhost:3306/volunteer?charset=utf8
+static: web/static
+templates: web/templates
+upload: web/static/upload
+prefix: '/'
+md5-salt: sdfafafaf
+sysname: 校园志愿者活动管理系统

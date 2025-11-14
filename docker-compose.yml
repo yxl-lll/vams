@@ -1,0 +1,45 @@
+services:
+  volunteer-db:
+    image: mysql:8.0
+    container_name: volunteer-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: volunteer
+      TZ: Asia/Shanghai
+    ports:
+      - "13306:3306"
+    volumes:
+      - ./volunteer.sql:/docker-entrypoint-initdb.d/volunteer.sql:ro
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p123456"]
+      timeout: 20s
+      retries: 10
+      start_period: 30s
+      interval: 10s
+
+  volunteer-web:
+    build: .
+    container_name: volunteer-web
+    restart: always
+    depends_on:
+      volunteer-db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=volunteer-db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=123456
+      - DB_NAME=volunteer
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./web:/app/web
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+
+volumes:
+  mysql_data:

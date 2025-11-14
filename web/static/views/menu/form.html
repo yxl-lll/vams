@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>角色管理</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" href="/static/layui/css/layui.css" media="all">
+    <link rel="stylesheet" href="/static/style/icon/icon.css">
+    <style>
+        .layui-form-item {
+            display: flex;
+        }
+
+        .layui-form-label {
+            width: 120px;
+        }
+
+        .layui-input-block {
+            margin-left: 0;
+            margin-right: 20px;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layui-form" lay-filter="layui-form-pd" style="padding: 20px 0 0 0;">
+        <div class="layui-form-item" id="p_id">
+            <label class="layui-form-label">父节点</label>
+            <div class="layui-input-block" style="z-index: 9999;">
+                <input type="text" name="p_id_name" id="p_id_select" lay-verify="required" placeholder="请选择父节点"
+                    autocomplete="off" class="layui-input">
+                <input type="hidden" name="p_id" id="p_id_name_select" lay-verify="required" placeholder="请选择父节点"
+                    autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item" id="role_name">
+            <label class="layui-form-label">菜单名称</label>
+            <div class="layui-input-block">
+                <input type="text" name="menu_name" lay-verify="required" placeholder="请输入菜单名称" autocomplete="off"
+                    class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">菜单类型</label>
+            <div class="layui-input-block">
+                <select name="type" lay-verify="required" placeholder="请选择菜单类型">
+                    <option value="">请选择</option>
+                    <option value="1">菜单</option>
+                    <option value="2">目录</option>
+                    <option value="3">按钮</option>
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">菜单图标</label>
+            <div class="layui-input-block">
+                <div class="layui-input-group">
+                    <input type="text" id="icon-input" name="icon" placeholder="请选择菜单图标" class="layui-input">
+                    <div class="layui-input-split layui-input-suffix" style="cursor: pointer;" id="icon-select">
+                        <i class="layui-icon layui-icon-search"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">菜单状态</label>
+            <div class="layui-input-block">
+                <input type="radio" name="menu_status" value="1" lay-verify="required" title="正常">
+                <input type="radio" name="menu_status" value="0" lay-verify="required" title="禁用">
+            </div>
+        </div>
+        <div class="layui-form-item" id="auth_code">
+            <label class="layui-form-label">校验码</label>
+            <div class="layui-input-block">
+                <input type="text" name="auth_code" placeholder="请输入校验码" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item" id="hurl">
+            <label class="layui-form-label">访问地址</label>
+            <div class="layui-input-block">
+                <input type="text" name="hurl" placeholder="请输入访问地址" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item" id="sort">
+            <label class="layui-form-label">排序</label>
+            <div class="layui-input-block">
+                <input type="number" lay-affix="number" name="sort" placeholder="请输入排序" autocomplete="off"
+                    class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item layui-hide">
+            <input type="button" lay-submit lay-filter="layui-form-pd" id="layui-form-pd" value="确认">
+        </div>
+    </div>
+
+    <script src="/static/layui/layui.js"></script>
+    <script src="/static/modules/icon/icon.js"></script>
+    <script>
+        layui.config({
+            base: '/static/' //静态资源所在路径
+        }).extend({
+            index: 'lib/index',
+            dtree: 'dtree/dtree',
+            icon: 'icon/iconPick'
+        }).use(['index', 'form', 'upload', 'laydate', 'icon', 'customSelect'], function () {
+            var $ = layui.$
+                , form = layui.form;
+            var laydate = layui.laydate;
+            var icon = layui.icon;
+            const select = layui.customSelect;
+            console.log(window)
+            icon.init({
+                el: $('#icon-select'),
+                on: function (obj) {
+                    $("#icon-input").val(obj)
+                }
+            })
+            var loadIndex = layer.load(4);
+            setTimeout(() => {
+                var selectVal = ''
+                var selectValId = ''
+                if (layui.getData) {
+                    var data = layui.getData()
+                    if (data) {
+                        selectVal = data.title
+                        selectValId = data.p_id
+                        form.val('layui-form-pd', JSON.parse(JSON.stringify(data)));
+                    }
+                }
+                $.ajax({
+                    type: "get",
+                    url: "/menu/tree",
+                    contentType: 'application/json;charset=utf-8',
+                    processData: false,
+                    dataType: "json",
+                    success: function (result) {
+                        if (result.success) {
+                            $('#p_id_name_select').val(selectValId)
+                            select.render({
+                                el: 'p_id_select',
+                                data: [{
+                                    title: "根路径",
+                                    id: '0',
+                                    children: result.data
+                                }],
+                                type: 'radio',
+                                value: selectVal,
+                                checked: function (obj) {
+                                    $('#p_id_name_select').val(obj.obj.data.id)
+                                    //obj.value 已选数据的title
+                                    //obj.data 已选数据
+                                }
+                            })
+
+                        } else {
+                        }
+                    },
+                    error: function (data) {
+                        layer.msg("网络错误！");
+                    }
+                });
+                layer.close(loadIndex)
+            }, 500);
+        })
+    </script>
+</body>
+
+</html>

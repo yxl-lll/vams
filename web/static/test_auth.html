@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>认证测试页面</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>认证测试页面</h1>
+    <div id="result"></div>
+    
+    <script>
+        // 检查是否有有效的JWT token
+        function getToken() {
+            return document.cookie.split(';').find(c => c.trim().startsWith('token='))?.split('=')[1];
+        }
+        
+        function checkAuth() {
+            const token = getToken();
+            if (!token) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">❌ 没有找到token，请先登录</p>';
+                return false;
+            }
+            document.getElementById('result').innerHTML = '<p style="color: green;">✅ 找到token: ' + token.substring(0, 20) + '...</p>';
+            return true;
+        }
+        
+        async function testAPI() {
+            const token = getToken();
+            if (!token) {
+                document.getElementById('result').innerHTML += '<p style="color: red;">❌ 无法测试API，没有token</p>';
+                return;
+            }
+            
+            try {
+                const response = await axios.get('/activity_type/list', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+                
+                document.getElementById('result').innerHTML += `
+                    <p style="color: green;">✅ API调用成功！</p>
+                    <p>状态码: ${response.status}</p>
+                    <p>响应数据: ${JSON.stringify(response.data, null, 2)}</p>
+                `;
+            } catch (error) {
+                document.getElementById('result').innerHTML += `
+                    <p style="color: red;">❌ API调用失败！</p>
+                    <p>错误: ${error.message}</p>
+                    <p>状态码: ${error.response?.status}</p>
+                    <p>响应: ${JSON.stringify(error.response?.data, null, 2)}</p>
+                `;
+            }
+        }
+        
+        // 页面加载时执行
+        window.onload = function() {
+            checkAuth();
+            if (checkAuth()) {
+                testAPI();
+            }
+        };
+    </script>
+</body>
+</html>

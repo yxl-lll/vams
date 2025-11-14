@@ -1,0 +1,183 @@
+name: Python FastAPI 应用 CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  PYTHON_VERSION: "3.10"
+  MYSQL_VERSION: "8.0"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.10, 3.11]
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: volunteer_test
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: 设置 Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: 缓存 pip 依赖
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
+
+    - name: 安装系统依赖
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y default-libmysqlclient-dev build-essential pkg-config
+
+    - name: 安装 Python 依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio pytest-cov httpx
+
+    - name: 等待数据库启动
+      run: |
+        python wait_for_db.py
+
+    - name: 运行测试
+      env:
+        DATABASE_URL: mysql://test_user:test_password@localhost:3306/volunteer_test
+      run: |
+        python -m pytest test_*.py -v --cov=volunteer --cov=system --cov=utils --cov-report=xml
+
+    - name: 上传测试覆盖率到 Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: 设置 Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: 安装代码质量工具
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort mypy
+
+    - name: 运行 flake8 检查
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+
+    - name: 运行 black 格式化检查
+      run: |
+        black --check --diff .
+
+    - name: 运行 isort 导入排序检查
+      run: |
+        isort --check-only --diff .
+
+    - name: 运行 mypy 类型检查
+      run: |
+        mypy --ignore-missing-imports volunteer/ system/ utils/
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: 设置 Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: 安装安全扫描工具
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit safety
+
+    - name: 运行 bandit 安全扫描
+      run: |
+        bandit -r . -f json -o bandit-report.json || true
+
+    - name: 运行 safety 依赖安全检查
+      run: |
+        safety check -r requirements.txt --json --output safety-report.json || true
+
+    - name: 上传安全扫描报告
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+
+  build:
+    needs: [test, lint, security]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: 设置 Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: 登录到 Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: 构建并推送 Docker 镜像
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/volunteer-management:latest
+          ${{ secrets.DOCKER_USERNAME }}/volunteer-management:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: 部署到生产环境
+      run: |
+        echo "部署到生产环境..."
+        # 这里可以添加具体的部署脚本
+        # 例如：SSH到服务器、运行docker-compose等
+
+    - name: 发送部署通知
+      run: |
+        echo "部署完成通知..."
+        # 这里可以添加通知逻辑，如发送Slack消息、邮件等

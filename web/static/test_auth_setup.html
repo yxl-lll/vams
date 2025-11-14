@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>认证测试设置</title>
+</head>
+<body>
+    <h1>认证测试设置</h1>
+    <p>正在设置认证token...</p>
+    
+    <script>
+        // 生成一个有效的JWT token (有效期2小时)
+        const token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMDAxIiwibmFtZSI6InRlc3RfdXNlciIsImV4cCI6MTc1OTkyMjE3Mn0.K5LyzG88ISI0xbd2Mo7gEjcRb8NLqUCz75nyDuLubGs'; // 这是一个示例token
+        
+        // 设置cookie
+        document.cookie = 'token=' + token + '; path=/; max-age=7200'; // 2小时有效期
+        
+        // 跳转到志愿者档案页面
+        setTimeout(function() {
+            window.location.href = '/static/views/volunteer-profile/list.html';
+        }, 1000);
+    </script>
+</body>
+</html>
